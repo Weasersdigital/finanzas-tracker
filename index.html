@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Panel — Finanzas &amp; Hábitos</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <div class="module-switch" id="moduleSwitch">
+    <button class="module-btn active" data-module="finance">💰 Finanzas</button>
+    <button class="module-btn" data-module="habits">🎯 Hábitos</button>
+  </div>
+
+  <div id="module-finance" class="module active">
+
+  <header class="topbar">
+    <div class="brand">💰 Finanzas</div>
+
+    <div class="scope-switch" id="scopeSwitch">
+      <button class="scope-btn active" data-scope="all">Todos</button>
+      <button class="scope-btn" data-scope="personal">Personal</button>
+      <button class="scope-btn" data-scope="empresa">Empresa</button>
+    </div>
+
+    <div class="month-picker">
+      <input type="month" id="monthInput">
+      <label class="all-time-toggle">
+        <input type="checkbox" id="allTimeToggle">
+        Todo el tiempo
+      </label>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Panel</button>
+    <button class="tab-btn" data-tab="transactions">Movimientos</button>
+    <button class="tab-btn" data-tab="fixed">Gastos Fijos</button>
+    <button class="tab-btn" data-tab="categories">Categorías</button>
+  </nav>
+
+  <main id="views">
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view active">
+      <div class="stat-cards" id="statCards"></div>
+
+      <div class="charts-row">
+        <div class="card chart-card">
+          <h3>Ingresos vs Gastos (últimos 6 meses)</h3>
+          <div id="barChart" class="chart-holder"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Gastos por categoría</h3>
+          <div id="donutChart" class="chart-holder"></div>
+          <div id="donutLegend" class="legend"></div>
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <h3>Patrimonio <span class="scope-total">(histórico, personal + empresa)</span></h3>
+        <div id="patrimonioChart" class="chart-holder"></div>
+        <div id="patrimonioLegend" class="legend"></div>
+      </div>
+
+      <div class="card">
+        <h3 id="assetFormTitle">Activos externos <span class="scope-total">(no pasan por Movimientos)</span></h3>
+        <p class="hint">Dinero que ya es tuyo pero no está registrado como transacción: inversiones previas a usar la app, préstamos, depósitos, etc. Edítalo cuando cambie de valor.</p>
+        <form id="assetForm" class="inline-form">
+          <input type="hidden" id="assetId">
+          <input type="text" id="assetName" placeholder="Nombre (ej. Depósito a plazo…)" required>
+          <input type="number" id="assetAmount" min="0" step="0.01" placeholder="Monto" required>
+          <select id="assetBucket">
+            <option value="ahorro">Ahorro</option>
+            <option value="inversion">Inversión</option>
+            <option value="empresa">Patrimonio empresa</option>
+          </select>
+          <button type="submit" class="primary-btn" id="assetSubmitBtn">Agregar</button>
+          <button type="button" class="secondary-btn" id="assetCancelEditBtn" style="display:none">Cancelar</button>
+        </form>
+        <div id="assetsList" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card">
+        <h3>Reparto de ingresos (Personal) <span class="scope-total" id="incomeSplitSubtitle"></span></h3>
+        <div class="inline-form" id="incomeSplitEditor" style="margin-bottom:16px"></div>
+        <div id="incomeSplitList"></div>
+      </div>
+    </section>
+
+    <!-- TRANSACTIONS -->
+    <section id="view-transactions" class="view">
+      <div class="toolbar">
+        <button class="primary-btn" id="addTxBtn">+ Nuevo movimiento</button>
+        <input type="text" id="txSearch" placeholder="Buscar descripción…">
+        <select id="txTypeFilter">
+          <option value="all">Todos los tipos</option>
+          <option value="income">Ingresos</option>
+          <option value="expense">Gastos</option>
+        </select>
+        <select id="txCategoryFilter">
+          <option value="all">Todas las categorías</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table id="txTable">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Ámbito</th>
+              <th>Categoría</th>
+              <th>Descripción</th>
+              <th class="num">Monto</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="txTableBody"></tbody>
+        </table>
+        <div id="txEmpty" class="empty-state" style="display:none">Sin movimientos para este filtro.</div>
+      </div>
+    </section>
+
+    <!-- FIXED EXPENSES -->
+    <section id="view-fixed" class="view">
+      <p class="hint">Registra los gastos que pagas todos los meses (renta, suscripciones, seguros, nómina fija…). Luego regístralos en un clic sobre el mes que tengas seleccionado arriba.</p>
+
+      <div class="card">
+        <h3 id="fixedFormTitle">Nuevo gasto fijo</h3>
+        <form id="fixedForm" class="inline-form">
+          <input type="hidden" id="fixedId">
+          <input type="text" id="fixedName" placeholder="Nombre (ej. Renta, Netflix…)" required>
+          <select id="fixedScope">
+            <option value="personal">Personal</option>
+            <option value="empresa">Empresa</option>
+          </select>
+          <select id="fixedCategory" required></select>
+          <input type="number" id="fixedAmount" min="0" step="0.01" placeholder="Monto" required>
+          <button type="submit" class="primary-btn" id="fixedSubmitBtn">Agregar</button>
+          <button type="button" class="secondary-btn" id="fixedCancelEditBtn" style="display:none">Cancelar</button>
+        </form>
+      </div>
+
+      <div id="fixedList" class="budgets-columns"></div>
+    </section>
+
+    <!-- CATEGORIES -->
+    <section id="view-categories" class="view">
+      <div class="card">
+        <h3 id="categoryFormTitle">Nueva categoría</h3>
+        <form id="categoryForm" class="inline-form">
+          <input type="hidden" id="catId">
+          <input type="text" id="catName" placeholder="Nombre" required>
+          <select id="catType">
+            <option value="expense">Gasto</option>
+            <option value="income">Ingreso</option>
+          </select>
+          <select id="catScope">
+            <option value="ambos">Personal y Empresa</option>
+            <option value="personal">Solo Personal</option>
+            <option value="empresa">Solo Empresa</option>
+          </select>
+          <select id="catBucket">
+            <option value="">Sin bolsillo</option>
+            <option value="costes">Costes de vida</option>
+            <option value="caprichos">Caprichos</option>
+            <option value="inversion">Inversión</option>
+            <option value="donaciones">Donaciones y regalos</option>
+          </select>
+          <button type="submit" class="primary-btn" id="catSubmitBtn">Agregar</button>
+          <button type="button" class="secondary-btn" id="catCancelEditBtn" style="display:none">Cancelar</button>
+        </form>
+        <p id="catEditHint" class="hint" style="display:none;margin:10px 0 0"></p>
+      </div>
+      <div id="categoriesList" class="categories-columns"></div>
+    </section>
+
+  </main>
+
+  </div>
+
+  <div id="module-habits" class="module">
+
+    <header class="topbar">
+      <div class="brand">🎯 Hábitos</div>
+      <div class="points-hud">
+        <div class="points-pill">⭐ <span id="pointsBalance">0</span> pts disponibles</div>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-habits-tab="today">Hoy</button>
+      <button class="tab-btn" data-habits-tab="week">Semana</button>
+      <button class="tab-btn" data-habits-tab="manage">Hábitos</button>
+      <button class="tab-btn" data-habits-tab="rewards">Recompensas</button>
+    </nav>
+
+    <main id="habitsViews">
+
+      <!-- TODAY -->
+      <section id="habits-view-today" class="view active">
+        <div class="card">
+          <h3>Meta semanal</h3>
+          <div class="weekly-goal-row">
+            <div class="progress-bar big"><div class="progress-bar-fill" id="weeklyProgressFill" style="width:0%"></div></div>
+            <span class="progress-caption" id="weeklyProgressCaption">0 / 0 pts esta semana</span>
+          </div>
+          <div class="inline-form" style="margin-top:12px">
+            <label for="weeklyGoalInput" class="hint" style="margin:0">Objetivo semanal (pts):</label>
+            <input type="number" id="weeklyGoalInput" min="0" step="5" style="width:100px">
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 id="todayDateLabel">Hoy</h3>
+          <div id="todayList"></div>
+        </div>
+
+        <div class="card" id="todayBonusCard" style="display:none">
+          <h3>✨ Bonus</h3>
+          <div id="todayBonusList"></div>
+        </div>
+      </section>
+
+      <!-- WEEK -->
+      <section id="habits-view-week" class="view">
+        <div class="card">
+          <div class="week-nav">
+            <button type="button" class="secondary-btn" id="weekPrevBtn">← Anterior</button>
+            <div class="week-nav-center">
+              <span id="weekRangeLabel" class="week-range-label"></span>
+              <button type="button" class="link-btn" id="weekTodayBtn">Ir a esta semana</button>
+            </div>
+            <button type="button" class="secondary-btn" id="weekNextBtn">Siguiente →</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table id="weekTable">
+              <thead></thead>
+              <tbody></tbody>
+              <tfoot></tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- MANAGE HABITS -->
+      <section id="habits-view-manage" class="view">
+        <div class="card">
+          <h3 id="habitFormTitle">Nuevo hábito</h3>
+          <form id="habitForm" class="inline-form">
+            <input type="hidden" id="habitId">
+            <input type="text" id="habitName" placeholder="Nombre (ej. Ejercicio, Leer 20 min…)" required>
+            <input type="number" id="habitPoints" min="1" step="1" placeholder="Puntos" required>
+            <label class="checkbox-label"><input type="checkbox" id="habitBonus"> Es un bonus (extra, no básico)</label>
+            <button type="submit" class="primary-btn" id="habitSubmitBtn">Agregar</button>
+            <button type="button" class="secondary-btn" id="habitCancelEditBtn" style="display:none">Cancelar</button>
+          </form>
+        </div>
+        <div id="habitsList" class="card"></div>
+      </section>
+
+      <!-- REWARDS -->
+      <section id="habits-view-rewards" class="view">
+        <div class="card">
+          <h3 id="rewardFormTitle">Nueva recompensa</h3>
+          <form id="rewardForm" class="inline-form">
+            <input type="hidden" id="rewardId">
+            <input type="text" id="rewardName" placeholder="Nombre (ej. Noche de peli…)" required>
+            <input type="number" id="rewardCost" min="1" step="1" placeholder="Costo en puntos" required>
+            <button type="submit" class="primary-btn" id="rewardSubmitBtn">Agregar</button>
+            <button type="button" class="secondary-btn" id="rewardCancelEditBtn" style="display:none">Cancelar</button>
+          </form>
+        </div>
+        <div id="rewardsList" class="card"></div>
+
+        <div class="card">
+          <h3>Historial de canjes</h3>
+          <div id="redemptionsList"></div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <footer class="footer">
+    <button id="exportBtn" class="link-btn">Exportar datos (backup)</button>
+    <label class="link-btn">
+      Importar datos
+      <input type="file" id="importInput" accept="application/json" style="display:none">
+    </label>
+    <span class="footer-note">Tus datos se guardan solo en este navegador (localStorage).</span>
+  </footer>
+
+</div>
+
+<!-- Transaction Modal -->
+<div id="txModalOverlay" class="modal-overlay">
+  <div class="modal">
+    <h3 id="txModalTitle">Nuevo movimiento</h3>
+    <form id="txForm">
+      <input type="hidden" id="txId">
+
+      <div class="field-row">
+        <label>Tipo</label>
+        <div class="radio-group" id="txTypeRadio">
+          <label><input type="radio" name="txType" value="expense" checked> Gasto</label>
+          <label><input type="radio" name="txType" value="income"> Ingreso</label>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label>Ámbito</label>
+        <div class="radio-group" id="txScopeRadio">
+          <label><input type="radio" name="txScope" value="personal" checked> Personal</label>
+          <label><input type="radio" name="txScope" value="empresa"> Empresa</label>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label for="txDate">Fecha</label>
+        <input type="date" id="txDate" required>
+      </div>
+
+      <div class="field-row">
+        <label for="txCategory">Categoría</label>
+        <select id="txCategory" required></select>
+      </div>
+
+      <div class="field-row">
+        <label for="txAmount">Monto</label>
+        <input type="number" id="txAmount" min="0" step="0.01" required placeholder="0.00">
+      </div>
+
+      <div class="field-row">
+        <label for="txDescription">Descripción</label>
+        <input type="text" id="txDescription" placeholder="Opcional">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="secondary-btn" id="txCancelBtn">Cancelar</button>
+        <button type="submit" class="primary-btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div id="confirmModalOverlay" class="modal-overlay">
+  <div class="modal">
+    <p id="confirmMessage"></p>
+    <div class="modal-actions">
+      <button type="button" class="secondary-btn" id="confirmCancelBtn">Cancelar</button>
+      <button type="button" class="primary-btn" id="confirmOkBtn">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
