@@ -233,6 +233,7 @@
     if (cb) cb();
   });
   $("#confirmCancelBtn").addEventListener("click", closeConfirm);
+  window.AppConfirm = showConfirm;
   confirmOverlay.addEventListener("click", e => { if (e.target === confirmOverlay) closeConfirm(); });
 
   let toastTimer;
@@ -258,6 +259,7 @@
     moduleSwitch.querySelectorAll(".module-btn").forEach(b => b.classList.toggle("active", b === btn));
     modules.forEach(m => m.classList.toggle("active", m.id === "module-" + btn.dataset.module));
     if (btn.dataset.module === "habits") renderHabitsActiveTab();
+    if (btn.dataset.module === "office" && window.OfficeModule) window.OfficeModule.render();
   });
 
   monthInput.value = state.month;
@@ -1393,6 +1395,7 @@
       incomeSplit: state.incomeSplit, externalAssets: state.externalAssets,
       habits: habitsState.habits, completions: habitsState.completions, rewards: habitsState.rewards,
       redemptions: habitsState.redemptions, weeklyGoal: habitsState.weeklyGoal,
+      office: window.OfficeModule ? window.OfficeModule.getData() : undefined,
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -1430,6 +1433,8 @@
         habitsState.redemptions = data.redemptions || [];
         habitsState.weeklyGoal = data.weeklyGoal || 0;
         persistHabits(); persistCompletions(); persistRewards(); persistRedemptions(); persistWeeklyGoal();
+
+        if (data.office && window.OfficeModule) window.OfficeModule.setData(data.office);
 
         renderAll();
         renderHabitsActiveTab();

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Panel — Finanzas &amp; Hábitos</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="office.css">
 </head>
 <body>
 
@@ -13,6 +14,7 @@
   <div class="module-switch" id="moduleSwitch">
     <button class="module-btn active" data-module="finance">💰 Finanzas</button>
     <button class="module-btn" data-module="habits">🎯 Hábitos</button>
+    <button class="module-btn" data-module="office">🏢 Oficina</button>
   </div>
 
   <div id="module-finance" class="module active">
@@ -289,6 +291,83 @@
 
   </div>
 
+  <div id="module-office" class="module">
+
+    <header class="topbar">
+      <div class="brand">🏢 Oficina virtual <span class="office-clock" id="officeClock"></span></div>
+      <div class="office-stats" id="officeStats"></div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-office-tab="floor">Planta</button>
+      <button class="tab-btn" data-office-tab="team">Equipo</button>
+    </nav>
+
+    <main>
+      <!-- FLOOR -->
+      <section id="office-view-floor" class="view active">
+        <div class="office-toolbar">
+          <label class="checkbox-label"><input type="checkbox" id="officeSimToggle"> Simulación en vivo</label>
+          <button type="button" class="secondary-btn" id="officeAllWorkBtn">📢 Todos a su puesto</button>
+          <button type="button" class="secondary-btn" id="officeMeetingBtn">📣 Reunión general</button>
+          <span class="hint office-tip">Haz clic en una persona para cambiar su estado.</span>
+        </div>
+        <div class="office-layout">
+          <div id="officeFloor" class="office-floor"></div>
+          <aside class="card office-feed-card">
+            <h3>Actividad</h3>
+            <ul id="officeFeed" class="office-feed"></ul>
+          </aside>
+        </div>
+      </section>
+
+      <!-- TEAM -->
+      <section id="office-view-team" class="view">
+        <div class="team-columns">
+          <div class="card">
+            <h3 id="personFormTitle">Nueva persona</h3>
+            <form id="personForm" class="person-form">
+              <input type="hidden" id="personId">
+              <div class="person-preview" id="personPreview"></div>
+              <div class="person-fields">
+                <input type="text" id="personName" placeholder="Nombre" required maxlength="30">
+                <input type="text" id="personRole" placeholder="Puesto (ej. Diseñadora)" maxlength="40">
+                <select id="personDept" title="Departamento"></select>
+                <select id="personStatus" title="Estado"></select>
+                <select id="personHairStyle" title="Peinado"></select>
+                <select id="personHair" title="Color de pelo"></select>
+                <select id="personSkin" title="Tono de piel"></select>
+                <label class="color-field">Camiseta <input type="color" id="personShirt" value="#4f46e5"></label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn" id="personSubmitBtn">Agregar</button>
+                  <button type="button" class="secondary-btn" id="personCancelBtn" style="display:none">Cancelar</button>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3 id="deptFormTitle">Nuevo departamento</h3>
+            <form id="deptForm" class="inline-form">
+              <input type="hidden" id="deptId">
+              <input type="text" id="deptEmoji" placeholder="🏢" maxlength="4" class="emoji-input">
+              <input type="text" id="deptName" placeholder="Nombre (ej. Legal)" required maxlength="30">
+              <input type="color" id="deptColor" value="#0ea5e9" title="Color">
+              <button type="submit" class="primary-btn" id="deptSubmitBtn">Agregar</button>
+              <button type="button" class="secondary-btn" id="deptCancelBtn" style="display:none">Cancelar</button>
+            </form>
+            <div id="deptList" class="office-list"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Personas</h3>
+          <div id="peopleList" class="office-list"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="officePopover" class="office-popover"></div>
+  </div>
+
   <footer class="footer">
     <button id="exportBtn" class="link-btn">Exportar datos (backup)</button>
     <label class="link-btn">
@@ -365,5 +444,6 @@
 <div id="toast" class="toast"></div>
 
 <script src="app.js"></script>
+<script src="office.js"></script>
 </body>
 </html>

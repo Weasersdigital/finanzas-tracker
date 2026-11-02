@@ -632,7 +632,7 @@ tr:last-child td { border-bottom: none; }
   border-radius: 999px;
   padding: 4px;
   gap: 4px;
-  max-width: 360px;
+  max-width: 480px;
   margin: 4px auto 20px;
 }
 
