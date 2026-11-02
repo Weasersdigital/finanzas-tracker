@@ -20,12 +20,15 @@
 
   const PHRASES = {
     default: ["Un momento…", "¡Listo! ✅", "Revisando correos 📧", "Casi termino", "¿Alguien tiene un cargador?"],
-    "Dirección": ["Revisando objetivos Q4 📈", "Firmando contratos ✍️", "¡Buen trabajo, equipo!", "Preparando la estrategia"],
-    "Finanzas": ["Cuadrando el balance 💰", "Facturas al día ✅", "Revisando el flujo de caja", "Cerrando el mes 📊"],
-    "Marketing": ["Lanzando campaña 🚀", "¿Este color o este? 🎨", "Programando posts 📱", "El reel va genial 🔥"],
-    "Ventas": ["¡Cerré una venta! 🎉", "Llamando a un cliente 📞", "Enviando propuesta", "Seguimiento del lead"],
-    "Tecnología": ["Desplegando a producción 🚢", "Arreglando un bug 🐛", "git push ✨", "Funciona en mi máquina 😅"],
-    "RR.HH.": ["Entrevista a las 12 🤝", "Organizando la formación", "Revisando nóminas", "¡Bienvenida, nueva incorporación!"],
+    "Dirección": ["Revisando objetivos del mes 📈", "Cerrando un cliente nuevo ✍️", "¡Buen trabajo, equipo!", "Preparando la estrategia", "¿Cómo va el canal?"],
+    "Guiones": ["Transforma → Segmenta ✍️", "Puliendo la INTRODUCCIÓN", "Este gancho es 🔥", "Buscando vídeo de inspiración", "Guion de 12 min listo 📝"],
+    "Edición": ["Renderizando en Remotion 🎬", "Modo pantalla 2.0 ✨", "Subtítulos al 80%", "Máster para YouTube listo 📤", "Ajustando el cristal y la luz 💡"],
+    "Miniaturas": ["¿Amarillo o dorado? 🎨", "Probando 3 miniaturas", "CTR al alza 📊", "Exportando a 1280×720", "Esta cara funciona 😄"],
+    "Redes": ["Programando el reel 📱", "¡Viral en Instagram! 🚀", "Respondiendo comentarios 💬", "Doble personaje grabado 🎭", "Subiendo el short"],
+    "Clientes": ["Actualizando ficha de cliente 📋", "Llamada con cliente a las 12 📞", "Enviando la entrega ✅", "Onboarding nuevo 🤝", "Feedback recibido 👍"],
+    "Ventas": ["¡Cerré una venta! 🎉", "Grabando la VSL 🎥", "Seguimiento del lead", "Enviando propuesta", "Caso de éxito nuevo 🏆"],
+    "Finanzas": ["Cuadrando el balance 💰", "Facturas al día ✅", "Revisando el flujo de caja", "Cerrando el mes 📊", "Personal vs empresa 🧾"],
+    "Canal propio": ["Grabando para el canal 🎙️", "Ideas para el próximo vídeo 💡", "Analizando retención 📈", "Programando estreno 📅"],
   };
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -38,26 +41,32 @@
 
   function defaultData() {
     const d = [
-      { id: uid(), name: "Dirección",  emoji: "👔", color: "#4f46e5" },
-      { id: uid(), name: "Finanzas",   emoji: "💰", color: "#16a34a" },
-      { id: uid(), name: "Marketing",  emoji: "📣", color: "#db2777" },
-      { id: uid(), name: "Ventas",     emoji: "🤝", color: "#ea580c" },
-      { id: uid(), name: "Tecnología", emoji: "💻", color: "#0891b2" },
-      { id: uid(), name: "RR.HH.",     emoji: "🧑‍🤝‍🧑", color: "#9333ea" },
+      { id: uid(), name: "Dirección",    emoji: "👔", color: "#4f46e5" },
+      { id: uid(), name: "Guiones",      emoji: "✍️", color: "#0891b2" },
+      { id: uid(), name: "Edición",      emoji: "🎬", color: "#db2777" },
+      { id: uid(), name: "Miniaturas",   emoji: "🎨", color: "#eab308" },
+      { id: uid(), name: "Redes",        emoji: "📱", color: "#9333ea" },
+      { id: uid(), name: "Clientes",     emoji: "🤝", color: "#ea580c" },
+      { id: uid(), name: "Ventas",       emoji: "📈", color: "#dc2626" },
+      { id: uid(), name: "Finanzas",     emoji: "💰", color: "#16a34a" },
+      { id: uid(), name: "Canal propio", emoji: "🎙️", color: "#0f766e" },
     ];
     const people = [
-      ["Arturo", "CEO", 0, "short"], ["Laura", "Directora de operaciones", 0, "long"],
-      ["Carlos", "Contable", 1, "short"], ["Marta", "Analista financiera", 1, "bun"],
-      ["Sofía", "Community manager", 2, "long"], ["Diego", "Diseñador gráfico", 2, "curly"], ["Valeria", "Editora de vídeo", 2, "bun"],
-      ["Javier", "Comercial", 3, "bald"], ["Lucía", "Account manager", 3, "long"],
-      ["Pablo", "Desarrollador", 4, "curly"], ["Elena", "Desarrolladora", 4, "short"], ["Hugo", "DevOps", 4, "short"],
-      ["Andrea", "Responsable de personas", 5, "curly"],
+      ["Arturo", "CEO y creador", 0, "short"], ["Laura", "Directora de operaciones", 0, "long"],
+      ["Mario", "Guionista YouTube (ScriptMaster)", 1, "curly"], ["Claudia", "Guionista Reels y TikTok", 1, "bun"],
+      ["Diego", "Editor Remotion (YouTube)", 2, "curly"], ["Valeria", "Editora de Reels", 2, "long"], ["Nico", "Editor de VSL", 2, "short"],
+      ["Sofía", "Diseñadora de miniaturas", 3, "long"],
+      ["Paula", "Community manager", 4, "bun"], ["Iván", "Gestor de Instagram", 4, "short"],
+      ["Lucía", "Account manager", 5, "long"], ["Hugo", "Onboarding de clientes", 5, "bald"],
+      ["Javier", "Closer de ventas", 6, "short"],
+      ["Marta", "Contable", 7, "bun"],
+      ["Elena", "Productora del canal", 8, "curly"],
     ].map(([name, role, di, hairStyle], i) => ({
       id: uid(), name, role, deptId: d[di].id, hairStyle,
       skin: SKINS[i % SKINS.length], hair: HAIRS[(i * 3) % HAIRS.length],
       shirt: d[di].color, status: i % 6 === 5 ? "break" : "working",
     }));
-    return { departments: d, people, simulate: true };
+    return { version: 2, departments: d, people, simulate: true };
   }
 
   function load() {
@@ -67,7 +76,8 @@
     } catch (e) { console.error("Error leyendo oficina", e); }
     return null;
   }
-  let data = load() || defaultData();
+  let data = load();
+  if (!data || data.version !== 2) data = defaultData();
   function persist() { localStorage.setItem(KEY, JSON.stringify(data)); }
   persist();
 
@@ -424,6 +434,11 @@
       persist(); resetDeptForm(); renderTeam();
     });
     $("#deptCancelBtn").addEventListener("click", resetDeptForm);
+    $("#officeResetBtn").addEventListener("click", () => {
+      confirmAction("Esto sustituirá tus departamentos y personas por el equipo de ejemplo. ¿Continuar?", () => {
+        data = defaultData(); persist(); logEvent("🔄 Equipo restablecido"); renderTeam();
+      });
+    });
 
     // Editar / eliminar
     $("#office-view-team").addEventListener("click", e => {

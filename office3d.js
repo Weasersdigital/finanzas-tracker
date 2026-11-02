@@ -234,7 +234,7 @@
     extent = { minX: -4.5, maxX: Math.max(cur["-1"], cur["1"]) + 1.5 };
     rooms.corridorCooler = null;
     cam.target.set((extent.minX + extent.maxX) / 2, 0.2, 0);
-    cam.r = Math.max(18, (extent.maxX - extent.minX) * 1.12);
+    cam.r = Math.max(18, (extent.maxX - extent.minX) * 0.9);
   }
 
   // ---------- Construcción de la escena estática ----------
