@@ -565,6 +565,32 @@
 }
 .away-chip:hover { color: var(--text); border-color: var(--text-muted); }
 
+/* ----- Vista 3D ----- */
+.office-floor.office-3d {
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+  height: min(72vh, 640px);
+  background: var(--surface-2);
+}
+.office-floor.office-3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+.office-3d-help {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border-radius: 999px;
+  padding: 3px 10px;
+  pointer-events: none;
+}
+
 /* ----- Feed ----- */
 .office-feed-card { position: sticky; top: 12px; max-height: 70vh; overflow: auto; }
 .office-feed-card h3 { margin-top: 0; }

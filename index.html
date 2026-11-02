@@ -310,7 +310,8 @@
           <label class="checkbox-label"><input type="checkbox" id="officeSimToggle"> Simulación en vivo</label>
           <button type="button" class="secondary-btn" id="officeAllWorkBtn">📢 Todos a su puesto</button>
           <button type="button" class="secondary-btn" id="officeMeetingBtn">📣 Reunión general</button>
-          <span class="hint office-tip">Haz clic en una persona para cambiar su estado.</span>
+          <button type="button" class="secondary-btn" id="officeViewBtn">🗺️ Ver en 2D</button>
+          <span class="hint office-tip">Cada persona tiene su despacho y se mueve sola. Haz clic en alguien para cambiar su estado.</span>
         </div>
         <div class="office-layout">
           <div id="officeFloor" class="office-floor"></div>
@@ -443,7 +444,9 @@
 
 <div id="toast" class="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 <script src="app.js"></script>
+<script src="office3d.js"></script>
 <script src="office.js"></script>
 </body>
 </html>

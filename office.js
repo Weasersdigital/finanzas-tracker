@@ -94,9 +94,21 @@
   }
 
   // ---------- Floor ----------
+  const use3D = () => !!(window.Office3D && window.Office3D.available() && data.view3d !== false);
+
   function renderFloor() {
     const floor = $("#officeFloor");
     if (!floor) return;
+    if (use3D()) {
+      if (!floor.classList.contains("office-3d")) {
+        floor.classList.add("office-3d");
+        window.Office3D.mount(floor, { openPopover, log: logEvent, STATUS });
+      }
+      window.Office3D.sync(data);
+      renderStats();
+      return;
+    }
+    if (floor.classList.contains("office-3d")) { floor.classList.remove("office-3d"); window.Office3D.unmount(); }
 
     // FLIP: guardar posiciones antes de volver a dibujar
     const before = {};
@@ -173,6 +185,11 @@
       return `<span class="office-stat"><i style="background:${s.color}"></i>${s.icon} ${n} ${s.label.toLowerCase()}</span>`;
     }).join("");
     $("#officeSimToggle").checked = !!data.simulate;
+    const vb = $("#officeViewBtn");
+    if (vb) {
+      vb.style.display = window.Office3D && window.Office3D.available() ? "" : "none";
+      vb.textContent = use3D() ? "🗺️ Ver en 2D" : "🧊 Ver en 3D";
+    }
   }
 
   // ---------- Activity feed ----------
@@ -206,13 +223,15 @@
     const candidates = data.people.filter(p => p.status === "working" || p.status === "meeting");
     if (!candidates.length) return;
     const p = pick(candidates);
-    const el = document.querySelector(`[data-bubble="${p.id}"]`);
-    if (!el) return;
+    const el = use3D() ? null : document.querySelector(`[data-bubble="${p.id}"]`);
+    if (!el && !use3D()) return;
     const dept = deptById(p.deptId);
     const pool = p.status === "meeting"
       ? ["¿Lo vemos el lunes?", "Buena idea 💡", "Apunto eso 📝", "¿Siguiente punto?", "De acuerdo 👍"]
       : (PHRASES[dept?.name] || PHRASES.default);
-    el.textContent = pick(pool);
+    const text = pick(pool);
+    if (use3D()) { window.Office3D.say(p.id, text); return; }
+    el.textContent = text;
     el.classList.add("show");
     setTimeout(() => el.classList.remove("show"), 3000);
   }
@@ -249,7 +268,7 @@
       <div class="pop-status">${Object.entries(STATUS).map(([k, s]) =>
         `<button type="button" class="status-btn ${p.status === k ? "active" : ""}" data-set-status="${k}" style="--c:${s.color}">${s.icon} ${s.label}</button>`).join("")}</div>`;
     pop.dataset.pid = pid;
-    const r = anchor.getBoundingClientRect();
+    const r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor;
     pop.style.top = `${window.scrollY + r.bottom + 6}px`;
     pop.style.left = `${Math.max(8, Math.min(window.scrollX + r.left + r.width / 2 - 140, window.scrollX + document.documentElement.clientWidth - 296))}px`;
     pop.classList.add("show");
@@ -348,6 +367,9 @@
     $("#officeSimToggle").addEventListener("change", e => {
       data.simulate = e.target.checked; persist();
       logEvent(data.simulate ? "▶️ Simulación activada" : "⏸️ Simulación pausada");
+    });
+    $("#officeViewBtn").addEventListener("click", () => {
+      data.view3d = !use3D(); persist(); renderFloor();
     });
     $("#officeAllWorkBtn").addEventListener("click", () => {
       data.people.forEach(p => { p.status = "working"; });
