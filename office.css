@@ -805,3 +805,32 @@
 @media (max-width: 420px) {
   .module-btn { padding: 9px 8px; font-size: 0.82rem; }
 }
+
+/* ----- Cerebro ----- */
+.brain-modal { max-width: 880px; max-height: 92vh; overflow: auto; }
+.brain-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.brain-head h3 { display: flex; align-items: center; gap: 10px; margin: 0; }
+.brain-head h3 small { display: block; font-weight: 500; }
+.brain-modal h4 { margin: 14px 0 6px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.brain-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 18px; }
+.brain-export { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
+.brain-add { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: var(--surface-2); }
+.brain-add.brain-inline { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.brain-add input[type="text"], .brain-add input[type="url"], .brain-add textarea {
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 0.85rem; flex: 1; min-width: 140px;
+}
+.brain-add textarea { resize: vertical; }
+.dictation-row { display: flex; gap: 8px; align-items: center; }
+.transcript { min-height: 48px; font-size: 0.85rem; padding: 8px 10px; border-radius: 8px; background: var(--surface); border: 1px dashed var(--border); white-space: pre-wrap; }
+.transcript .interim { color: var(--text-muted); }
+#brainDictateBtn.recording { background: var(--expense); color: #fff; border-color: var(--expense); animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.5); } 50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); } }
+.file-btn { cursor: pointer; }
+.knowledge-list { display: flex; flex-direction: column; gap: 6px; }
+.knowledge-item { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--surface); }
+.knowledge-item summary { cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.knowledge-item summary .icon-btn { margin-left: auto; }
+.knowledge-item .ktype { font-size: 0.75rem; }
+.knowledge-item pre { white-space: pre-wrap; font: inherit; font-size: 0.85rem; margin: 8px 0 0; max-height: 260px; overflow: auto; }
+.pop-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+@media (max-width: 720px) { .brain-grid { grid-template-columns: 1fr; } }

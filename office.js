@@ -1,6 +1,6 @@
 // ---------- Oficina virtual ----------
 // Módulo independiente: departamentos con personas trabajando, sala de reuniones,
-// cafetería, simulación en vivo y gestión del equipo. Persiste en localStorage.
+// simulación en vivo, cerebro de cada trabajador y gestión del equipo. Persiste en localStorage.
 (function () {
   "use strict";
 
@@ -10,7 +10,6 @@
   const STATUS = {
     working: { label: "Trabajando", icon: "💻", color: "#16a34a" },
     meeting: { label: "En reunión", icon: "🗣️", color: "#7c3aed" },
-    break:   { label: "En pausa",   icon: "☕", color: "#d97706" },
     away:    { label: "Ausente",    icon: "🌙", color: "#9ca3af" },
   };
 
@@ -19,16 +18,11 @@
   const HAIR_STYLES = { short: "Corto", long: "Largo", bun: "Moño", curly: "Rizado", bald: "Calvo" };
 
   const PHRASES = {
-    default: ["Un momento…", "¡Listo! ✅", "Revisando correos 📧", "Casi termino", "¿Alguien tiene un cargador?"],
-    "Dirección": ["Revisando objetivos del mes 📈", "Cerrando un cliente nuevo ✍️", "¡Buen trabajo, equipo!", "Preparando la estrategia", "¿Cómo va el canal?"],
-    "Guiones": ["Transforma → Segmenta ✍️", "Puliendo la INTRODUCCIÓN", "Este gancho es 🔥", "Buscando vídeo de inspiración", "Guion de 12 min listo 📝"],
-    "Edición": ["Renderizando en Remotion 🎬", "Modo pantalla 2.0 ✨", "Subtítulos al 80%", "Máster para YouTube listo 📤", "Ajustando el cristal y la luz 💡"],
-    "Miniaturas": ["¿Amarillo o dorado? 🎨", "Probando 3 miniaturas", "CTR al alza 📊", "Exportando a 1280×720", "Esta cara funciona 😄"],
-    "Redes": ["Programando el reel 📱", "¡Viral en Instagram! 🚀", "Respondiendo comentarios 💬", "Doble personaje grabado 🎭", "Subiendo el short"],
-    "Clientes": ["Actualizando ficha de cliente 📋", "Llamada con cliente a las 12 📞", "Enviando la entrega ✅", "Onboarding nuevo 🤝", "Feedback recibido 👍"],
-    "Ventas": ["¡Cerré una venta! 🎉", "Grabando la VSL 🎥", "Seguimiento del lead", "Enviando propuesta", "Caso de éxito nuevo 🏆"],
-    "Finanzas": ["Cuadrando el balance 💰", "Facturas al día ✅", "Revisando el flujo de caja", "Cerrando el mes 📊", "Personal vs empresa 🧾"],
-    "Canal propio": ["Grabando para el canal 🎙️", "Ideas para el próximo vídeo 💡", "Analizando retención 📈", "Programando estreno 📅"],
+    default: ["Un momento…", "¡Listo! ✅", "Revisando correos 📧", "Casi termino"],
+    "Dirección": ["Revisando objetivos del mes 📈", "Cerrando un cliente nuevo ✍️", "¡Buen trabajo, equipo!", "Preparando la estrategia"],
+    "Contenido": ["Renderizando en Remotion 🎬", "¿Amarillo o dorado? 🎨", "Este gancho es 🔥", "Sacando clips del vídeo largo ✂️", "Programando la publicación 📅", "Subtítulos al 80%"],
+    "Clientes": ["Onboarding del cliente nuevo 🤝", "Respondiendo DMs 📩", "Enviando accesos y cuestionario 📋", "Kickoff a las 12 📞"],
+    "Finanzas": ["Cuadrando el balance 💰", "Facturas al día ✅", "Revisando el flujo de caja", "Cerrando el mes 📊"],
   };
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -39,42 +33,50 @@
   function hash(str) { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  const ONBOARDING_PROCESS = `PROCESO DE ONBOARDING DE UN CLIENTE NUEVO
+
+1. Definir la ubicación de grabación de los clones (dónde y cuándo se graba al cliente).
+2. Crear el grupo de WhatsApp con Arturo, el cliente y Javi (el camarógrafo).
+3. Enviar al cliente el documento de onboarding.
+4. Enviar al cliente el contrato para que lo firme.
+5. Decirle que se descargue la app de HeyGen y enviarle el enlace de afiliado de HeyGen de Arturo.
+6. Darle acceso a la comunidad de Skool de Arturo.
+7. Cuando el cliente haya rellenado el documento de onboarding, fijar la llamada de onboarding.
+8. Crear las carpetas de Drive donde se va a alojar todo el material del cliente.
+9. Una vez hecha la grabación, importar y generar los clones de inteligencia artificial en HeyGen.
+
+Reglas:
+- No fijar la llamada de onboarding hasta que el documento de onboarding esté rellenado.
+- Los clones solo se generan cuando la grabación esté hecha.
+- Cada paso se marca como hecho en la ficha del cliente.`;
+
   function defaultData() {
     const d = [
-      { id: uid(), name: "Dirección",    emoji: "👔", color: "#4f46e5" },
-      { id: uid(), name: "Guiones",      emoji: "✍️", color: "#0891b2" },
-      { id: uid(), name: "Edición",      emoji: "🎬", color: "#db2777" },
-      { id: uid(), name: "Miniaturas",   emoji: "🎨", color: "#eab308" },
-      { id: uid(), name: "Redes",        emoji: "📱", color: "#9333ea" },
-      { id: uid(), name: "Clientes",     emoji: "🤝", color: "#ea580c" },
-      { id: uid(), name: "Ventas",       emoji: "📈", color: "#dc2626" },
-      { id: uid(), name: "Finanzas",     emoji: "💰", color: "#16a34a" },
-      { id: uid(), name: "Canal propio", emoji: "🎙️", color: "#0f766e" },
+      { id: uid(), name: "Dirección", emoji: "👔", color: "#4f46e5" },
+      { id: uid(), name: "Contenido", emoji: "🎬", color: "#db2777" },
+      { id: uid(), name: "Clientes",  emoji: "🤝", color: "#ea580c" },
+      { id: uid(), name: "Finanzas",  emoji: "💰", color: "#16a34a" },
     ];
     const people = [
-      ["Arturo", "CEO y creador", 0, "short", "Estrategia de contenido, Negociación, YouTube, Marca personal", "Revisar objetivos del mes|Cerrar propuesta con cliente nuevo|Grabar vídeo del canal"],
-      ["Laura", "Directora de operaciones", 0, "long", "Gestión de proyectos, Notion, Procesos, Planificación", "Planificar entregas de la semana|Revisar carga del equipo de edición|Actualizar el calendario editorial"],
-      ["Mario", "Guionista YouTube (ScriptMaster)", 1, "curly", "ScriptMaster, Storytelling, Retención, Investigación", "Guion de 12 min para cliente A|Transformar transcripción de referencia|Segmentar guion del canal"],
-      ["Claudia", "Guionista Reels y TikTok", 1, "bun", "Ganchos virales, Formatos cortos, Tendencias, Copy", "5 guiones de reels para cliente B|Guion 'Doble personaje'|Buscar vídeos de inspiración"],
-      ["Diego", "Editor Remotion (YouTube)", 2, "curly", "Remotion, React, After Effects, Corrección de color", "Montar vídeo largo cliente A|Modo pantalla 2.0 en el capítulo 3|Exportar máster para YouTube"],
-      ["Valeria", "Editora de Reels", 2, "long", "Remotion, Subtítulos dinámicos, Ritmo, CapCut", "Editar 3 reels cliente B|Subtítulos del reel de hoy|Aplicar estilo Jan × Arturo"],
-      ["Nico", "Editor de VSL", 2, "short", "VSL, Casos de éxito, Motion graphics, Audio", "Montar VSL del lanzamiento|Insertar casos de éxito|Botón de CTA animado"],
-      ["Sofía", "Diseñadora de miniaturas", 3, "long", "Photoshop, Composición, Tipografía, Pruebas A/B", "3 variantes de miniatura vídeo A|Exportar miniatura 1280×720|Revisar CTR de la semana"],
-      ["Paula", "Community manager", 4, "bun", "Instagram, Copywriting, Programación de contenido, Analítica", "Programar reels de la semana|Responder comentarios|Informe de alcance"],
-      ["Iván", "Gestor de Instagram", 4, "short", "Instagram Ads, Crecimiento, Colaboraciones, Stories", "Subir stories del cliente C|Contactar 3 colaboradores|Revisar campaña de ads"],
-      ["Lucía", "Account manager", 5, "long", "Atención al cliente, Fichas de cliente, Seguimiento, Presentaciones", "Actualizar ficha de cliente B|Llamada semanal con cliente A|Enviar entrega del vídeo"],
-      ["Hugo", "Onboarding de clientes", 5, "bald", "Onboarding, Formularios, Documentación, Soporte", "Onboarding del cliente nuevo|Preparar cuestionario inicial|Crear carpeta compartida"],
-      ["Javier", "Closer de ventas", 6, "short", "Ventas, Llamadas de cierre, CRM, Objeciones", "Llamada de cierre a las 12|Seguimiento de 4 leads|Enviar propuesta a cliente D"],
-      ["Marta", "Contable", 7, "bun", "Contabilidad, Facturación, Impuestos, Excel", "Emitir facturas del mes|Cuadrar banco con la app|Preparar el cierre trimestral"],
-      ["Elena", "Productora del canal", 8, "curly", "Producción, Grabación, Iluminación, Planificación de rodajes", "Preparar rodaje del jueves|Lista de ideas para el canal|Analizar retención del último vídeo"],
-    ].map(([name, role, di, hairStyle, skills, tasks], i) => ({
+      ["Arturo", "CEO y creador", 0, "short", "Estrategia de contenido, Negociación, YouTube, Marca personal", "Revisar objetivos del mes|Cerrar propuesta con cliente nuevo", ""],
+      ["Sofía", "Diseñadora de miniaturas", 1, "long", "Photoshop, Composición, Tipografía, Pruebas A/B de miniaturas", "3 variantes de miniatura del vídeo A|Exportar miniatura 1280×720", ""],
+      ["Diego", "Editor de vídeos de YouTube", 1, "curly", "Remotion, Edición de vídeo largo, Corrección de color, Ritmo narrativo", "Montar vídeo largo del cliente A|Exportar máster para YouTube", ""],
+      ["Nico", "Editor de clips (de largo a corto)", 1, "short", "Detección de momentos virales, Reencuadre 9:16, Subtítulos dinámicos", "Sacar 5 clips del vídeo largo A|Subtitular los clips", ""],
+      ["Valeria", "Editora de reels", 1, "bun", "Remotion, Estilo Jan × Arturo, Transiciones, Audio", "Editar 3 reels del cliente B|Aplicar estilo mostaza al reel 2", ""],
+      ["Claudia", "Guionista de reels", 1, "long", "Ganchos virales, Formatos Recrear/Reacción/Doble personaje, Tendencias, Copy", "5 guiones de reels para cliente B|Buscar vídeos de inspiración", ""],
+      ["Iván", "Publicador de vídeos", 1, "short", "YouTube Studio, Instagram, Programación, Títulos y descripciones SEO", "Programar los reels de la semana|Publicar vídeo largo A con capítulos", ""],
+      ["Hugo", "Agente de onboarding de clientes", 2, "bald", "Onboarding de clientes, Grupos de WhatsApp, Contratos, HeyGen (app, afiliado y clones), Comunidad Skool, Drive, Llamada de onboarding", "Definir ubicación de grabación de clones|Crear grupo de WhatsApp (Arturo, cliente y Javi)|Enviar documento de onboarding|Enviar contrato para firmar|Enviar enlace de HeyGen (app + afiliado)|Dar acceso a la comunidad de Skool|Fijar llamada de onboarding cuando esté rellenado|Crear carpetas de Drive del cliente|Importar y generar clones en HeyGen tras la grabación", ONBOARDING_PROCESS],
+      ["Paula", "Gestora de DMs de Instagram", 2, "bun", "Atención por DM, Tono de marca, Cualificación de leads, Respuestas rápidas", "Responder DMs pendientes|Pasar leads cualificados a Arturo", ""],
+      ["Marta", "Contable", 3, "curly", "Contabilidad, Facturación, Impuestos, Excel", "Emitir facturas del mes|Cuadrar banco con la app|Preparar el cierre trimestral", ""],
+    ].map(([name, role, di, hairStyle, skills, tasks, knowledge], i) => ({
       id: uid(), name, role, deptId: d[di].id, hairStyle,
       skin: SKINS[i % SKINS.length], hair: HAIRS[(i * 3) % HAIRS.length],
-      shirt: d[di].color, status: i % 6 === 5 ? "break" : "working",
+      shirt: d[di].color, status: "working",
       skills: skills.split(",").map(x => x.trim()),
       tasks: tasks.split("|").map(text => ({ id: uid(), text, done: false })),
+      knowledge: knowledge ? [{ id: uid(), type: "nota", title: "Proceso de onboarding", content: knowledge, createdAt: new Date().toISOString() }] : [],
     }));
-    return { version: 3, departments: d, people, simulate: true };
+    return { version: 4, departments: d, people, simulate: true };
   }
 
   function load() {
@@ -85,14 +87,20 @@
     return null;
   }
   let data = load();
-  if (!data || !data.version || data.version < 2) data = defaultData();
-  if (data.version === 2) {
-    // Datos de ejemplo de la versión anterior (sin conocimientos ni tareas): se completan
+  if (!data || !data.version || data.version < 4) {
     const fresh = defaultData();
-    const untouched = data.people.every(p => fresh.people.some(f => f.name === p.name && f.role === p.role));
+    // Si el equipo es el de ejemplo de una versión anterior, se sustituye; si lo habías editado, se conserva.
+    const sampleNames = ["Arturo", "Laura", "Mario", "Claudia", "Diego", "Valeria", "Nico", "Sofía", "Paula", "Iván", "Lucía", "Hugo", "Javier", "Marta", "Elena", "Carlos", "Lucía", "Andrea", "Pablo", "Elena"];
+    const untouched = !data || !Array.isArray(data.people) || data.people.every(p => sampleNames.includes(p.name));
     if (untouched) data = fresh;
-    else { data.people.forEach(p => { p.skills = p.skills || []; p.tasks = p.tasks || []; }); data.version = 3; }
+    else { data.version = 4; }
   }
+  data.people.forEach(p => {
+    if (p.status === "break") p.status = "working";
+    if (!Array.isArray(p.skills)) p.skills = [];
+    if (!Array.isArray(p.tasks)) p.tasks = [];
+    if (!Array.isArray(p.knowledge)) p.knowledge = [];
+  });
   function persist() { localStorage.setItem(KEY, JSON.stringify(data)); }
   persist();
 
@@ -167,24 +175,16 @@
     }).join("");
 
     const meeting = data.people.filter(p => p.status === "meeting");
-    const breakers = data.people.filter(p => p.status === "break");
     const away = data.people.filter(p => p.status === "away");
 
     floor.innerHTML = `
       <div class="rooms">${rooms}</div>
       <div class="common-areas">
         <section class="room meeting-room" style="--dept:#7c3aed">
-          <header class="room-sign"><span>🗣️ Sala de reuniones</span><small>${meeting.length ? meeting.length + " en reunión" : "Libre"}</small></header>
+          <header class="room-sign"><span>🗣️ Sala de reuniones</span><small>${meeting.length ? esc(currentMeeting ? currentMeeting.topic : meeting.length + " en reunión") : "Libre"}</small></header>
           <div class="room-floor meeting-floor">
             <div class="meeting-people">${meeting.map(p => personHTML(p, "meeting")).join("")}</div>
             <div class="meeting-table">${meeting.length ? "📋" : ""}</div>
-          </div>
-        </section>
-        <section class="room cafe-room" style="--dept:#d97706">
-          <header class="room-sign"><span>☕ Cafetería</span><small>${breakers.length ? breakers.length + " en pausa" : "Vacía"}</small></header>
-          <div class="room-floor cafe-floor">
-            <div class="cafe-counter"><span>☕</span><span>🥐</span><span>🍩</span><span>🧃</span></div>
-            <div class="cafe-people">${breakers.map(p => personHTML(p, "break")).join("")}</div>
           </div>
         </section>
         <section class="room away-room" style="--dept:#9ca3af">
@@ -251,12 +251,16 @@
   const STATUS_MSG = {
     working: n => `<b>${n}</b> vuelve a su puesto 💻`,
     meeting: n => `<b>${n}</b> entra en la sala de reuniones 🗣️`,
-    break:   n => `<b>${n}</b> se va a por un café ☕`,
     away:    n => `<b>${n}</b> sale de la oficina 🚪`,
   };
 
   function setStatus(p, status) {
     if (p.status === status) return;
+    if (currentMeeting && status !== "meeting") {
+      currentMeeting.pids = currentMeeting.pids.filter(id => id !== p.id);
+      if (currentMeeting.pids.length < 2) { p.status = status; endMeeting(); return; }
+    }
+    if (status === "meeting" && currentMeeting && !currentMeeting.pids.includes(p.id)) currentMeeting.pids.push(p.id);
     p.status = status;
     persist();
     logEvent(STATUS_MSG[status](esc(p.name)));
@@ -273,7 +277,7 @@
     if (!el && !use3D()) return;
     const dept = deptById(p.deptId);
     const pool = p.status === "meeting"
-      ? ["¿Lo vemos el lunes?", "Buena idea 💡", "Apunto eso 📝", "¿Siguiente punto?", "De acuerdo 👍"]
+      ? ["Buena idea 💡", "Apunto eso 📝", "¿Siguiente punto?", "De acuerdo 👍", "Lo tengo listo mañana ✅", "¿Me pasas el material?"]
       : (PHRASES[dept?.name] || PHRASES.default);
     const task = p.status === "working" ? currentTask(p) : null;
     const text = task && Math.random() < 0.6 ? `📌 ${task.text}` : pick(pool);
@@ -284,15 +288,46 @@
   }
 
   // ---------- Simulation ----------
+  // Reuniones entre agentes: solo cuando dos o más personas colaboran en algo concreto
+  let currentMeeting = null; // { topic, pids, until }
+  const MEETING_TOPICS = [
+    (a, b) => `${a.name} y ${b.name} coordinan: ${currentTask(a) ? currentTask(a).text : "la entrega de la semana"}`,
+    (a, b) => `${a.name} pide feedback a ${b.name}: ${currentTask(a) ? currentTask(a).text : "su tarea"}`,
+    (a, b) => `${b.name} entrega a ${a.name}: ${currentTask(b) ? currentTask(b).text : "material"}`,
+  ];
+  function startMeeting(pids, topic) {
+    const people = pids.map(id => data.people.find(p => p.id === id)).filter(Boolean);
+    if (people.length < 2) return;
+    currentMeeting = { topic, pids: people.map(p => p.id), until: Date.now() + 25000 + Math.random() * 20000 };
+    people.forEach(p => { p.status = "meeting"; });
+    persist();
+    logEvent(`🗣️ <b>Reunión</b>: ${esc(topic)}`);
+    renderFloor();
+    if (currentTab === "team") renderTeam();
+  }
+  function endMeeting() {
+    if (!currentMeeting) return;
+    const m = currentMeeting; currentMeeting = null;
+    m.pids.forEach(id => { const p = data.people.find(x => x.id === id); if (p && p.status === "meeting") p.status = "working"; });
+    persist();
+    logEvent(`✅ Reunión terminada: ${esc(m.topic)}`);
+    renderFloor();
+    if (currentTab === "team") renderTeam();
+  }
   function simulateTick() {
-    if (!data.simulate || !isVisible() || !data.people.length) return;
-    const p = pick(data.people);
-    const r = Math.random();
-    let next;
-    if (p.status === "working") next = r < 0.45 ? "meeting" : r < 0.9 ? "break" : "away";
-    else if (p.status === "away") next = r < 0.5 ? "working" : null;
-    else next = r < 0.75 ? "working" : null;
-    if (next) setStatus(p, next);
+    if (!isVisible()) return;
+    if (currentMeeting && Date.now() > currentMeeting.until) { endMeeting(); return; }
+    if (!data.simulate || currentMeeting || data.people.length < 2) return;
+    if (Math.random() > 0.18) return;
+    const working = data.people.filter(p => p.status === "working");
+    if (working.length < 2) return;
+    const a = pick(working);
+    // Preferir a alguien del mismo departamento (colaboran en la misma cadena de trabajo)
+    const same = working.filter(p => p.id !== a.id && p.deptId === a.deptId);
+    const b = pick(same.length && Math.random() < 0.7 ? same : working.filter(p => p.id !== a.id));
+    const pids = [a.id, b.id];
+    if (same.length > 1 && Math.random() < 0.3) { const c = pick(same.filter(p => p.id !== b.id)); if (c) pids.push(c.id); }
+    startMeeting(pids, pick(MEETING_TOPICS)(a, b));
   }
 
   function isVisible() {
@@ -319,7 +354,8 @@
       <div class="pop-section"><h4>📋 Tareas</h4>
         <ul class="task-list">${tasksOf(p).map(t => `<li class="${t.done ? "done" : ""}"><label><input type="checkbox" data-task="${t.id}" ${t.done ? "checked" : ""}> ${esc(t.text)}</label></li>`).join("") || '<li class="hint">Ninguna todavía</li>'}</ul>
         <form class="task-add" data-task-add><input type="text" placeholder="Nueva tarea…" maxlength="80"><button type="submit" class="secondary-btn">+</button></form></div>
-      <button type="button" class="link-btn pop-edit" data-pop-edit="${p.id}">✏️ Editar ficha completa</button>`;
+      <div class="pop-actions"><button type="button" class="primary-btn" data-open-brain="${p.id}">🧠 Abrir cerebro</button>
+      <button type="button" class="link-btn pop-edit" data-pop-edit="${p.id}">✏️ Editar ficha</button></div>`;
     pop.dataset.pid = pid;
     const r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor;
     pop.style.top = `${window.scrollY + r.bottom + 6}px`;
@@ -354,6 +390,7 @@
           ${total ? `<small class="hint">📋 ${pending} de ${total} tareas pendientes${currentTask(p) ? ` · ahora: ${esc(currentTask(p).text)}` : ""}</small>` : '<small class="hint">📋 Sin tareas</small>'}
         </span>
         <span class="status-pill" style="--c:${s.color}">${s.icon} ${s.label}</span>
+        <button class="icon-btn" data-open-brain="${p.id}" title="Cerebro (${(p.knowledge || []).length} conocimientos)">🧠</button>
         <button class="icon-btn" data-edit-person="${p.id}" title="Editar">✏️</button>
         <button class="icon-btn danger" data-del-person="${p.id}" title="Eliminar">✕</button></div>`;
     }).join("") || '<p class="hint">Añade a tu primera persona arriba.</p>';
@@ -408,9 +445,184 @@
     else if (window.confirm(msg)) fn();
   }
 
+  // ---------- Cerebro de cada trabajador ----------
+  let brainPid = null, recognition = null, dictating = false;
+  const KTYPE = { nota: "📝 Nota", audio: "🎙️ Dictado", archivo: "📄 Archivo", enlace: "🔗 Enlace" };
+
+  function openBrain(pid) {
+    const p = data.people.find(x => x.id === pid);
+    if (!p) return;
+    brainPid = pid;
+    stopDictation();
+    $("#brainNote").value = "";
+    $("#brainLink").value = "";
+    $("#brainTranscript").textContent = "";
+    renderBrain();
+    $("#brainOverlay").classList.add("open");
+  }
+  function closeBrain() { stopDictation(); $("#brainOverlay").classList.remove("open"); brainPid = null; }
+  function brainPerson() { return data.people.find(x => x.id === brainPid); }
+
+  function renderBrain() {
+    const p = brainPerson();
+    if (!p) return;
+    const d = deptById(p.deptId);
+    $("#brainTitle").innerHTML = `${avatarHTML(p, "mini")} <span>🧠 Cerebro de ${esc(p.name)} <small class="hint">${esc(p.role)} · ${d ? esc(d.emoji + " " + d.name) : ""}</small></span>`;
+    $("#brainSkills").innerHTML = skillsOf(p).map(k => `<span class="skill-chip">${esc(k)}</span>`).join("") || '<span class="hint">Sin conocimientos registrados. Añádelos en «Editar ficha».</span>';
+    $("#brainTasks").innerHTML = tasksOf(p).map(t => `<li class="${t.done ? "done" : ""}"><label><input type="checkbox" data-brain-task="${t.id}" ${t.done ? "checked" : ""}> ${esc(t.text)}</label></li>`).join("") || '<li class="hint">Sin tareas.</li>';
+    const items = p.knowledge || [];
+    $("#brainCount").textContent = items.length ? `${items.length} ${items.length === 1 ? "elemento" : "elementos"} · ${fmtSize(JSON.stringify(items).length)}` : "Vacío";
+    $("#brainList").innerHTML = items.slice().reverse().map(k => `
+      <details class="knowledge-item" data-kid="${k.id}">
+        <summary><span class="ktype">${KTYPE[k.type] || "📝"}</span> <strong>${esc(k.title)}</strong>
+          <small class="hint">${new Date(k.createdAt).toLocaleDateString("es")} · ${fmtSize((k.content || "").length)}</small>
+          <button type="button" class="icon-btn danger" data-del-knowledge="${k.id}" title="Eliminar">✕</button></summary>
+        ${k.type === "enlace" ? `<a href="${esc(k.content)}" target="_blank" rel="noopener">${esc(k.content)}</a>` : `<pre>${esc(k.content)}</pre>`}
+      </details>`).join("") || '<p class="hint">Todavía no le has dado ningún conocimiento. Escríbelo, díctalo, sube un archivo o pega un enlace.</p>';
+  }
+  function fmtSize(n) { return n < 1024 ? `${n} car.` : `${(n / 1024).toFixed(1)} KB`; }
+
+  function addKnowledge(type, title, content) {
+    const p = brainPerson();
+    if (!p || !content.trim()) return;
+    if (!Array.isArray(p.knowledge)) p.knowledge = [];
+    p.knowledge.push({ id: uid(), type, title: title.trim() || KTYPE[type], content: content.trim(), createdAt: new Date().toISOString() });
+    try { persist(); } catch (e) { p.knowledge.pop(); alert("No cabe más conocimiento en el almacenamiento del navegador. Elimina algún elemento grande."); return; }
+    logEvent(`🧠 <b>${esc(p.name)}</b> aprende: ${esc(title || KTYPE[type])}`);
+    renderBrain();
+    if (currentTab === "team") renderTeam();
+  }
+
+  // Dictado por voz con el reconocimiento del navegador (Chrome, Edge, Safari)
+  function startDictation() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { $("#brainTranscript").textContent = "Tu navegador no permite dictar. Usa Chrome o Edge, o escribe el texto."; return; }
+    recognition = new SR();
+    recognition.lang = "es-ES";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    let finalText = $("#brainTranscript").dataset.final || "";
+    recognition.onresult = e => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalText += r[0].transcript + " ";
+        else interim += r[0].transcript;
+      }
+      $("#brainTranscript").dataset.final = finalText;
+      $("#brainTranscript").innerHTML = `${esc(finalText)}<span class="interim">${esc(interim)}</span>`;
+    };
+    recognition.onerror = e => { $("#brainTranscript").textContent = e.error === "not-allowed" ? "Permiso de micrófono denegado. Actívalo en el candado de la barra de direcciones." : `Error de dictado: ${e.error}`; stopDictation(); };
+    recognition.onend = () => { if (dictating) { try { recognition.start(); } catch (_) {} } };
+    recognition.start();
+    dictating = true;
+    $("#brainDictateBtn").textContent = "⏹️ Parar";
+    $("#brainDictateBtn").classList.add("recording");
+  }
+  function stopDictation() {
+    dictating = false;
+    if (recognition) { try { recognition.stop(); } catch (_) {} recognition = null; }
+    const b = $("#brainDictateBtn");
+    if (b) { b.textContent = "🎙️ Dictar"; b.classList.remove("recording"); }
+  }
+
+  // Exportación: prompt de agente y SKILL.md
+  function agentPrompt(p) {
+    const d = deptById(p.deptId);
+    const lines = [
+      `# ${p.name} — ${p.role}`,
+      `Departamento: ${d ? d.name : "—"}. Eres ${p.name}, ${p.role.toLowerCase()} en una agencia de contenido. Actúa siempre desde ese rol.`,
+      "",
+      "## Conocimientos",
+      ...(skillsOf(p).length ? skillsOf(p).map(k => `- ${k}`) : ["- (sin conocimientos registrados)"]),
+      "",
+      "## Tareas actuales",
+      ...(tasksOf(p).length ? tasksOf(p).map(t => `- [${t.done ? "x" : " "}] ${t.text}`) : ["- (sin tareas)"]),
+      "",
+      "## Base de conocimiento",
+    ];
+    const items = p.knowledge || [];
+    if (!items.length) lines.push("(vacía)");
+    items.forEach(k => { lines.push(`### ${k.title} (${KTYPE[k.type] || k.type})`, k.content, ""); });
+    return lines.join("\n");
+  }
+  function skillMd(p) {
+    const slug = p.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
+    return `---\nname: ${slug}\ndescription: ${p.role}. Usa esta skill cuando haga falta el trabajo de ${p.name}: ${skillsOf(p).slice(0, 4).join(", ") || p.role}.\n---\n\n${agentPrompt(p)}\n`;
+  }
+  function download(name, text) {
+    const blob = new Blob([text], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function initBrain() {
+    $("#brainCloseBtn").addEventListener("click", closeBrain);
+    $("#brainOverlay").addEventListener("click", e => { if (e.target === $("#brainOverlay")) closeBrain(); });
+    $("#brainNoteForm").addEventListener("submit", e => {
+      e.preventDefault();
+      addKnowledge("nota", $("#brainNoteTitle").value, $("#brainNote").value);
+      $("#brainNoteTitle").value = ""; $("#brainNote").value = "";
+    });
+    $("#brainLinkForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const url = $("#brainLink").value.trim();
+      if (!url) return;
+      addKnowledge("enlace", $("#brainLinkTitle").value || url.replace(/^https?:\/\//, "").slice(0, 60), url);
+      $("#brainLinkTitle").value = ""; $("#brainLink").value = "";
+    });
+    $("#brainFile").addEventListener("change", e => {
+      [...e.target.files].forEach(file => {
+        if (file.size > 400 * 1024) { alert(`${file.name} es demasiado grande (máx. 400 KB).`); return; }
+        const reader = new FileReader();
+        reader.onload = () => addKnowledge("archivo", file.name, String(reader.result));
+        reader.readAsText(file);
+      });
+      e.target.value = "";
+    });
+    $("#brainDictateBtn").addEventListener("click", () => { if (dictating) stopDictation(); else startDictation(); });
+    $("#brainSaveDictationBtn").addEventListener("click", () => {
+      stopDictation();
+      const text = ($("#brainTranscript").dataset.final || "").trim();
+      if (!text) { $("#brainTranscript").textContent = "No hay nada dictado todavía."; return; }
+      addKnowledge("audio", $("#brainDictationTitle").value || "Dictado " + new Date().toLocaleString("es"), text);
+      $("#brainTranscript").textContent = ""; $("#brainTranscript").dataset.final = ""; $("#brainDictationTitle").value = "";
+    });
+    $("#brainClearDictationBtn").addEventListener("click", () => { stopDictation(); $("#brainTranscript").textContent = ""; $("#brainTranscript").dataset.final = ""; });
+    $("#brainList").addEventListener("click", e => {
+      const del = e.target.closest("[data-del-knowledge]");
+      if (!del) return;
+      e.preventDefault();
+      const p = brainPerson();
+      confirmAction("¿Eliminar este conocimiento?", () => { p.knowledge = p.knowledge.filter(k => k.id !== del.dataset.delKnowledge); persist(); renderBrain(); if (currentTab === "team") renderTeam(); });
+    });
+    $("#brainTasks").addEventListener("change", e => {
+      const cb = e.target.closest("[data-brain-task]");
+      const p = brainPerson();
+      const t = p && tasksOf(p).find(t => t.id === cb.dataset.brainTask);
+      if (!t) return;
+      t.done = cb.checked; persist(); renderBrain();
+      if (t.done) logEvent(`✅ <b>${esc(p.name)}</b> termina: ${esc(t.text)}`);
+      if (currentTab === "team") renderTeam();
+    });
+    $("#brainCopyBtn").addEventListener("click", async () => {
+      const p = brainPerson();
+      try { await navigator.clipboard.writeText(agentPrompt(p)); $("#brainCopyBtn").textContent = "✅ Copiado"; setTimeout(() => $("#brainCopyBtn").textContent = "📋 Copiar prompt del agente", 1800); }
+      catch (_) { download(`${p.name}-prompt.md`, agentPrompt(p)); }
+    });
+    $("#brainSkillBtn").addEventListener("click", () => { const p = brainPerson(); download(`SKILL-${p.name}.md`, skillMd(p)); });
+    $("#brainEditBtn").addEventListener("click", () => {
+      const pid = brainPid; closeBrain();
+      document.querySelector('[data-office-tab="team"]').click();
+      const b = document.querySelector(`[data-edit-person="${pid}"]`); if (b) b.click();
+    });
+  }
+
   function init() {
     const root = $("#module-office");
     if (!root) return;
+    initBrain();
 
     fillSelect($("#personStatus"), Object.keys(STATUS), Object.values(STATUS).map(s => `${s.icon} ${s.label}`));
     fillSelect($("#personSkin"), SKINS, SKINS.map((_, i) => `Tono ${i + 1}`));
@@ -438,12 +650,13 @@
       if (use3D()) window.Office3D.focusFloor(e.target.value);
     });
     $("#officeAllWorkBtn").addEventListener("click", () => {
+      currentMeeting = null;
       data.people.forEach(p => { p.status = "working"; });
       persist(); logEvent("📢 ¡Todo el mundo a su puesto!"); renderFloor();
     });
     $("#officeMeetingBtn").addEventListener("click", () => {
-      data.people.forEach(p => { if (p.status !== "away") p.status = "meeting"; });
-      persist(); logEvent("📣 Reunión general convocada"); renderFloor();
+      const pids = data.people.filter(p => p.status !== "away").map(p => p.id);
+      startMeeting(pids, "Reunión general del equipo");
     });
 
     // Click en persona
@@ -456,6 +669,8 @@
         return;
       }
       if (e.target.closest("[data-pop-close]")) { closePopover(); return; }
+      const brainBtn = e.target.closest("[data-open-brain]");
+      if (brainBtn) { closePopover(); openBrain(brainBtn.dataset.openBrain); return; }
       const editBtn = e.target.closest("[data-pop-edit]");
       if (editBtn) {
         closePopover();
@@ -542,6 +757,7 @@
     $("#office-view-team").addEventListener("click", e => {
       const t = e.target.closest("button");
       if (!t) return;
+      if (t.dataset.openBrain) { openBrain(t.dataset.openBrain); return; }
       if (t.dataset.editPerson) {
         const p = data.people.find(x => x.id === t.dataset.editPerson);
         $("#personId").value = p.id; $("#personName").value = p.name; $("#personRole").value = p.role;
