@@ -44,15 +44,6 @@
 }
 
 .office-tip { margin: 0 0 0 auto; }
-.office-floor-select {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
 
 .office-layout {
   display: grid;
@@ -574,32 +565,6 @@
 }
 .away-chip:hover { color: var(--text); border-color: var(--text-muted); }
 
-/* ----- Vista 3D ----- */
-.office-floor.office-3d {
-  padding: 0;
-  overflow: hidden;
-  position: relative;
-  height: min(80vh, 760px);
-  background: var(--surface-2);
-}
-.office-floor.office-3d canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-  touch-action: none;
-}
-.office-3d-help {
-  position: absolute;
-  left: 10px;
-  bottom: 8px;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
-  border-radius: 999px;
-  padding: 3px 10px;
-  pointer-events: none;
-}
-
 /* ----- Feed ----- */
 .office-feed-card { position: sticky; top: 12px; max-height: 70vh; overflow: auto; }
 .office-feed-card h3 { margin-top: 0; }
@@ -834,3 +799,20 @@
 .knowledge-item pre { white-space: pre-wrap; font: inherit; font-size: 0.85rem; margin: 8px 0 0; max-height: 260px; overflow: auto; }
 .pop-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 @media (max-width: 720px) { .brain-grid { grid-template-columns: 1fr; } }
+
+/* ----- CEO ----- */
+.ceo-card { margin-bottom: 16px; }
+.ceo-form { display: flex; gap: 8px; align-items: stretch; }
+.ceo-form textarea {
+  flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 0.9rem; resize: vertical;
+}
+.ceo-reply { margin: 12px 0 8px; font-size: 0.9rem; }
+.plan-list { display: flex; flex-direction: column; gap: 8px; }
+.plan-item { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface-2); }
+.plan-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.plan-head select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; max-width: 100%; }
+.plan-head .icon-btn { margin-left: auto; }
+.plan-item ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.plan-item input[type="text"] { width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; }
+.ceo-actions { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+@media (max-width: 560px) { .ceo-form { flex-direction: column; } }
