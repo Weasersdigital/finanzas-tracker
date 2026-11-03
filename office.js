@@ -10,7 +10,6 @@
   const STATUS = {
     working: { label: "Trabajando", icon: "💻", color: "#16a34a" },
     meeting: { label: "En reunión", icon: "🗣️", color: "#7c3aed" },
-    away:    { label: "Ausente",    icon: "🌙", color: "#9ca3af" },
   };
 
   const SKINS = ["#f5d0b5", "#e8b896", "#d29b72", "#a86e47", "#7a4a2a", "#f1c9a5"];
@@ -96,7 +95,7 @@ Reglas:
     else { data.version = 4; }
   }
   data.people.forEach(p => {
-    if (p.status === "break") p.status = "working";
+    if (p.status !== "meeting") p.status = "working";
     if (!Array.isArray(p.skills)) p.skills = [];
     if (!Array.isArray(p.tasks)) p.tasks = [];
     if (!Array.isArray(p.knowledge)) p.knowledge = [];
@@ -137,22 +136,9 @@ Reglas:
   }
 
   // ---------- Floor ----------
-  const use3D = () => !!(window.Office3D && window.Office3D.available() && data.view3d !== false);
-
   function renderFloor() {
     const floor = $("#officeFloor");
     if (!floor) return;
-    if (use3D()) {
-      if (!floor.classList.contains("office-3d")) {
-        floor.classList.add("office-3d");
-        window.Office3D.mount(floor, { openPopover, log: logEvent, STATUS });
-      }
-      window.Office3D.sync(data);
-      renderStats();
-      renderFloorSelect();
-      return;
-    }
-    if (floor.classList.contains("office-3d")) { floor.classList.remove("office-3d"); window.Office3D.unmount(); }
 
     // FLIP: guardar posiciones antes de volver a dibujar
     const before = {};
@@ -175,7 +161,6 @@ Reglas:
     }).join("");
 
     const meeting = data.people.filter(p => p.status === "meeting");
-    const away = data.people.filter(p => p.status === "away");
 
     floor.innerHTML = `
       <div class="rooms">${rooms}</div>
@@ -186,10 +171,6 @@ Reglas:
             <div class="meeting-people">${meeting.map(p => personHTML(p, "meeting")).join("")}</div>
             <div class="meeting-table">${meeting.length ? "📋" : ""}</div>
           </div>
-        </section>
-        <section class="room away-room" style="--dept:#9ca3af">
-          <header class="room-sign"><span>🚪 Fuera de la oficina</span><small>${away.length}</small></header>
-          <div class="room-floor away-floor">${away.map(p => `<button type="button" class="away-chip" data-pid="${p.id}">🌙 ${esc(p.name)}</button>`).join("") || '<p class="room-empty">Todo el mundo está dentro</p>'}</div>
         </section>
       </div>`;
 
@@ -213,16 +194,6 @@ Reglas:
     renderStats();
   }
 
-  function renderFloorSelect() {
-    const sel = $("#officeFloorSelect");
-    if (!sel) return;
-    const keep = sel.value;
-    const opts = window.Office3D.floorsList();
-    sel.innerHTML = '<option value="">🏢 Edificio entero</option>' + opts.map(f => `<option value="${f.id}">${esc(f.label)}</option>`).join("");
-    sel.value = opts.some(f => f.id === keep) ? keep : "";
-    sel.style.display = "";
-  }
-
   function renderStats() {
     const el = $("#officeStats");
     if (!el) return;
@@ -231,11 +202,6 @@ Reglas:
       return `<span class="office-stat"><i style="background:${s.color}"></i>${s.icon} ${n} ${s.label.toLowerCase()}</span>`;
     }).join("");
     $("#officeSimToggle").checked = !!data.simulate;
-    const vb = $("#officeViewBtn");
-    if (vb) {
-      vb.style.display = window.Office3D && window.Office3D.available() ? "" : "none";
-      vb.textContent = use3D() ? "🗺️ Ver en 2D" : "🧊 Ver en 3D";
-    }
   }
 
   // ---------- Activity feed ----------
@@ -251,7 +217,6 @@ Reglas:
   const STATUS_MSG = {
     working: n => `<b>${n}</b> vuelve a su puesto 💻`,
     meeting: n => `<b>${n}</b> entra en la sala de reuniones 🗣️`,
-    away:    n => `<b>${n}</b> sale de la oficina 🚪`,
   };
 
   function setStatus(p, status) {
@@ -273,15 +238,14 @@ Reglas:
     const candidates = data.people.filter(p => p.status === "working" || p.status === "meeting");
     if (!candidates.length) return;
     const p = pick(candidates);
-    const el = use3D() ? null : document.querySelector(`[data-bubble="${p.id}"]`);
-    if (!el && !use3D()) return;
+    const el = document.querySelector(`[data-bubble="${p.id}"]`);
+    if (!el) return;
     const dept = deptById(p.deptId);
     const pool = p.status === "meeting"
       ? ["Buena idea 💡", "Apunto eso 📝", "¿Siguiente punto?", "De acuerdo 👍", "Lo tengo listo mañana ✅", "¿Me pasas el material?"]
       : (PHRASES[dept?.name] || PHRASES.default);
     const task = p.status === "working" ? currentTask(p) : null;
     const text = task && Math.random() < 0.6 ? `📌 ${task.text}` : pick(pool);
-    if (use3D()) { window.Office3D.say(p.id, text); return; }
     el.textContent = text;
     el.classList.add("show");
     setTimeout(() => el.classList.remove("show"), 3000);
@@ -443,6 +407,183 @@ Reglas:
     // Reutiliza el modal de confirmación global (definido en app.js)
     if (window.AppConfirm) window.AppConfirm(msg, fn);
     else if (window.confirm(msg)) fn();
+  }
+
+  // ---------- CEO: reparte las peticiones entre el equipo ----------
+  const STOP = new Set("de del la las el los un una unos unas y o a al en con para por que se su sus es hay hacer haz tiene tienen este esta esto eso ese esa lo le les mi me nos ya muy mas más también sobre como cómo cuando donde todo toda todos todas otra otro otros otras cada".split(" "));
+  const SYN = [
+    [/^(editar|edicion|editor|editora|montar|montaje|montado|render)/, "edicion"],
+    [/^(miniatura|thumbnail|portada)/, "miniatura"],
+    [/^(reel|reels|tiktok|short|shorts|vertical)/, "reels"],
+    [/^(clip|clips|recorte|recortes|corte|cortes|trocear)/, "clips"],
+    [/^(public|programar|programacion|programad|subir|subid|subim)/, "publicar"],
+    [/^(onboarding|alta|bienvenida|incorporar|incorporacion)/, "onboarding"],
+    [/^(whatsapp|contrato|contratos|heygen|skool|drive|clon|clones|camarografo|grabacion)/, "onboarding"],
+    [/^(dm|dms|mensaje|mensajes|directo|directos|responder|respuesta|respuestas|inbox)/, "dm"],
+    [/^(factura|facturas|facturar|facturacion|cobro|cobros|cobrar|pago|pagos|contabilidad|contable|impuesto|impuestos|balance|gasto|gastos|ingreso|ingresos)/, "finanzas"],
+    [/^(guion|guiones|guionista|escribir|redactar|gancho|ganchos)/, "guion"],
+    [/^(titulo|titulos|descripcion|descripciones|seo)/, "titulo"],
+    [/^(sacar|extraer|trocea)/, "clips"],
+    [/^(revis|aprobar|aprobacion|validar|supervisar|ok$)/, "revision"],
+    [/^(youtube|largo|largos)/, "youtube"],
+    [/^(video|videos|vídeo|vídeos)/, "video"],
+    [/^(estrategia|decidir|decision|propuesta|objetivo|objetivos|negociar|negociacion)/, "direccion"],
+    [/^(instagram|ig)/, "instagram"],
+  ];
+  function tokens(text) {
+    const out = new Set();
+    String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9ñ]+/).forEach(w => {
+      if (w.length < 2 || STOP.has(w)) return;
+      const syn = SYN.find(([re]) => re.test(w));
+      out.add(syn ? syn[1] : w);
+    });
+    // "sacar reels/clips de un vídeo" son clips, no reels nuevos
+    if (out.has("clips")) out.delete("reels");
+    return out;
+  }
+  const CLAUSE_SPLIT = /[,.;\n]+|\s+y\s+(?=(?:adem[aá]s|luego|despu[eé]s|tambi[eé]n|quiero|hay|tengo|necesito|editar|edita|sacar|saca|crear|crea|hacer|haz|publicar|publica|grabar|montar|subir|programar|responder|revisar|me\s|que\s|lo\s|una\s))/i;
+  function splitClauses(text) {
+    return String(text).split(CLAUSE_SPLIT).map(c => c.trim().replace(/^(?:y|e|o|adem[aá]s|luego|despu[eé]s|tambi[eé]n|entonces|pues|que)\s+/i, "").trim()).filter(c => c.length > 2);
+  }
+  function cleanTask(clause) {
+    let t = clause.replace(/^(?:hay que|quiero|tengo que|necesito|hace falta|habr[ií]a que|vamos a|me gustar[ií]a)\s+/i, "").trim();
+    if (/^(?:el|la|los|las|un|una|unos|unas)\s/i.test(t)) t = "Hacer " + t;
+    if (/^una vez/i.test(t)) t = t.replace(/^una vez\s+/i, "Cuando ");
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  function onboardingNames(clause) {
+    const m = clause.match(/onboarding\s+(?:de|del|a|para)\s+(.+)$/i);
+    if (!m) return [];
+    return m[1].split(/\s*,\s*|\s+y\s+(?:de\s+|del\s+|a\s+)?|\s+e\s+(?:de\s+)?/i).map(n => n.replace(/^(?:de|del|a|para)\s+/i, "").trim()).filter(n => n && n.split(/\s+/).length <= 3).map(n => n.charAt(0).toUpperCase() + n.slice(1));
+  }
+  function ceo() {
+    if (data.ceoId) { const c = data.people.find(p => p.id === data.ceoId); if (c) return c; }
+    const dir = data.departments.find(d => /direcci/i.test(d.name));
+    return data.people.find(p => /ceo|director|directora|fundador|fundadora/i.test(p.role)) || (dir && data.people.find(p => p.deptId === dir.id)) || data.people[0];
+  }
+  function workerKeywords(p) {
+    const d = deptById(p.deptId);
+    const t = tokens([p.role, ...skillsOf(p), d ? d.name : "", ...(p.knowledge || []).map(k => k.title)].join(" "));
+    return t;
+  }
+  // Plan por frases: cada frase se asigna a quien mejor encaja con su puesto y conocimientos.
+  // Devuelve [{pid, tasks, matches, why}] en orden.
+  function planDistribution(request) {
+    const boss = ceo();
+    const workers = data.people.filter(p => p !== boss).map(p => ({ p, kw: workerKeywords(p) }));
+    const items = [];
+    const add = (person, task, matches, why) => {
+      let it = items.find(x => x.pid === person.id);
+      if (!it) { it = { pid: person.id, tasks: [], matches: [], why }; items.push(it); }
+      if (!it.tasks.includes(task)) it.tasks.push(task);
+      matches.forEach(m => { if (!it.matches.includes(m)) it.matches.push(m); });
+    };
+    let reviewSeen = false, unmatched = [];
+    splitClauses(request).forEach(clause => {
+      const toks = tokens(clause);
+      if (!toks.size) return;
+      const text = cleanTask(clause);
+      if (toks.has("revision")) {
+        reviewSeen = true;
+        add(boss, `Revisión final y OK (${cleanTask(clause).replace(/^Hacer\s+/i, "")})`, ["revision"], "revisión");
+        return;
+      }
+      if (toks.has("onboarding")) {
+        const names = onboardingNames(clause);
+        const best = workers.filter(w => w.kw.has("onboarding")).sort((a, b) => b.kw.size - a.kw.size)[0];
+        if (best) {
+          const proc = (best.p.knowledge || []).find(k => /onboarding/i.test(k.title) && /^\s*\d+[.)]/m.test(k.content));
+          const steps = proc ? proc.content.split("\n").map(l => (l.match(/^\s*\d+[.)]\s*(.+)$/) || [])[1]).filter(Boolean) : [];
+          (names.length ? names : [""]).forEach(n => {
+            const tag = n ? `[Onboarding ${n}]` : "[Onboarding]";
+            if (steps.length) steps.forEach(st => add(best.p, `${tag} ${st.trim()}`, ["onboarding"], "onboarding"));
+            else add(best.p, n ? `Onboarding de ${n}` : text, ["onboarding"], "onboarding");
+          });
+          return;
+        }
+      }
+      const scored = workers.map(w => {
+        const matches = [...toks].filter(t => w.kw.has(t));
+        const strong = matches.filter(m => m !== "video" && m !== "instagram");
+        return { w, score: strong.length + (matches.length - strong.length) * 0.3, matches };
+      }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+      if (!scored.length) { unmatched.push(text); return; }
+      const top = scored[0].score;
+      const chosen = scored.filter(x => x.score === top);
+      chosen.forEach(x => {
+        let task = text;
+        if (x.matches.includes("publicar") && reviewSeen) task += ` (cuando ${boss.name} lo haya revisado)`;
+        add(x.w.p, task, x.matches, x.matches.join(", "));
+      });
+    });
+    unmatched.forEach(t => add(boss, `Por asignar: ${t}`, ["sin encaje"], "sin encaje"));
+    return items;
+  }
+  function shortText(t) { t = t.trim().replace(/\s+/g, " "); return t.length > 90 ? t.slice(0, 87) + "…" : t; }
+
+  let pendingPlan = null;
+  function askCeo(request) {
+    const boss = ceo();
+    if (!boss) return;
+    const items = planDistribution(request);
+    if (!items.length) {
+      pendingPlan = null;
+      $("#ceoPlan").innerHTML = `<p class="ceo-reply">🧑‍💼 <b>${esc(boss.name)}</b>: no he entendido qué hay que hacer. Dímelo con verbos concretos: onboarding de X, editar el vídeo, sacar clips, miniatura, título, reels, publicar, responder DMs, facturar…</p>`;
+      return;
+    }
+    pendingPlan = { request, items };
+    renderPlan();
+  }
+  function renderPlan() {
+    const boss = ceo();
+    const box = $("#ceoPlan");
+    if (!pendingPlan) { box.innerHTML = ""; return; }
+    const options = pid => data.people.map(p => `<option value="${p.id}" ${p.id === pid ? "selected" : ""}>${esc(p.name)} · ${esc(p.role)}</option>`).join("");
+    box.innerHTML = `<p class="ceo-reply">🧑‍💼 <b>${esc(boss.name)}</b>: lo reparto así. Cambia a quien quieras y confirma.</p>
+      <div class="plan-list">${pendingPlan.items.map((it, i) => {
+        const p = data.people.find(x => x.id === it.pid);
+        return `<div class="plan-item">
+          <div class="plan-head">${avatarHTML(p, "mini")}<select data-plan-pid="${i}">${options(it.pid)}</select>
+            <small class="hint">por: ${esc(it.matches.join(", "))}</small>
+            <button type="button" class="icon-btn danger" data-plan-del="${i}" title="Quitar">✕</button></div>
+          <ul>${it.tasks.map((t, j) => `<li><input type="text" value="${esc(t)}" data-plan-task="${i}:${j}"></li>`).join("")}</ul>
+        </div>`; }).join("")}</div>
+      <div class="ceo-actions"><button type="button" class="primary-btn" id="ceoConfirmBtn">✅ Confirmar reparto</button>
+        <button type="button" class="link-btn" id="ceoCancelBtn">Cancelar</button></div>`;
+    box.querySelectorAll("[data-plan-pid]").forEach(sel => sel.addEventListener("change", () => { pendingPlan.items[+sel.dataset.planPid].pid = sel.value; }));
+    box.querySelectorAll("[data-plan-task]").forEach(inp => inp.addEventListener("input", () => { const [i, j] = inp.dataset.planTask.split(":").map(Number); pendingPlan.items[i].tasks[j] = inp.value; }));
+    box.querySelectorAll("[data-plan-del]").forEach(b => b.addEventListener("click", () => { pendingPlan.items.splice(+b.dataset.planDel, 1); if (!pendingPlan.items.length) pendingPlan = null; renderPlan(); }));
+    // Si se cambia el responsable, se fusionan filas duplicadas al confirmar
+    $("#ceoConfirmBtn").addEventListener("click", () => {
+      confirmPlan(pendingPlan.items.map(it => ({ person: data.people.find(x => x.id === it.pid), tasks: it.tasks.filter(t => t.trim()) })), pendingPlan.request);
+    });
+    $("#ceoCancelBtn").addEventListener("click", () => { pendingPlan = null; renderPlan(); });
+  }
+  function confirmPlan(items, request) {
+    const boss = ceo();
+    const assigned = [];
+    const merged = [];
+    items.forEach(({ person, tasks }) => { if (!person) return; const m = merged.find(x => x.person === person); if (m) m.tasks.push(...tasks); else merged.push({ person, tasks: [...tasks] }); });
+    merged.forEach(({ person, tasks }) => {
+      if (!person || !tasks.length) return;
+      if (!Array.isArray(person.tasks)) person.tasks = [];
+      tasks.forEach(text => person.tasks.push({ id: uid(), text, done: false }));
+      assigned.push(person);
+      logEvent(person === boss ? `📌 <b>${esc(boss.name)}</b> se queda: ${esc(tasks.length === 1 ? tasks[0] : tasks.length + " tareas")}` : `📌 <b>${esc(boss.name)}</b> asigna a <b>${esc(person.name)}</b>: ${esc(tasks.length === 1 ? tasks[0] : tasks.length + " tareas")}`);
+    });
+    if (!Array.isArray(data.requests)) data.requests = [];
+    data.requests.unshift({ id: uid(), text: request, at: new Date().toISOString(), to: assigned.map(p => p.id) });
+    data.requests.length = Math.min(data.requests.length, 50);
+    persist();
+    pendingPlan = null;
+    $("#ceoPlan").innerHTML = `<p class="ceo-reply">✅ <b>${esc(boss.name)}</b>: hecho. ${assigned.length ? "Reparto entregado a " + assigned.map(p => esc(p.name)).join(", ") + "." : ""}</p>`;
+    $("#ceoInput").value = "";
+    if (assigned.length) {
+      const pids = [boss.id, ...assigned.filter(p => p !== boss).map(p => p.id)];
+      if (pids.length >= 2) startMeeting(pids, `${boss.name} reparte: ${shortText(request)}`);
+    }
+    renderFloor();
+    if (currentTab === "team") renderTeam();
   }
 
   // ---------- Cerebro de cada trabajador ----------
@@ -641,13 +782,12 @@ Reglas:
       data.simulate = e.target.checked; persist();
       logEvent(data.simulate ? "▶️ Simulación activada" : "⏸️ Simulación pausada");
     });
-    $("#officeViewBtn").addEventListener("click", () => {
-      data.view3d = !use3D(); persist();
-      $("#officeFloorSelect").style.display = "none";
-      renderFloor();
-    });
-    $("#officeFloorSelect").addEventListener("change", e => {
-      if (use3D()) window.Office3D.focusFloor(e.target.value);
+    $("#ceoForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const text = $("#ceoInput").value.trim();
+      if (!text) return;
+      logEvent(`🗣️ <b>Tú</b> → <b>${esc(ceo().name)}</b>: ${esc(shortText(text))}`);
+      askCeo(text);
     });
     $("#officeAllWorkBtn").addEventListener("click", () => {
       currentMeeting = null;
@@ -655,8 +795,7 @@ Reglas:
       persist(); logEvent("📢 ¡Todo el mundo a su puesto!"); renderFloor();
     });
     $("#officeMeetingBtn").addEventListener("click", () => {
-      const pids = data.people.filter(p => p.status !== "away").map(p => p.id);
-      startMeeting(pids, "Reunión general del equipo");
+      startMeeting(data.people.map(p => p.id), "Reunión general del equipo");
     });
 
     // Click en persona
@@ -693,7 +832,7 @@ Reglas:
         }
         return;
       }
-      const person = e.target.closest(".person[data-pid], .away-chip[data-pid]");
+      const person = e.target.closest(".person[data-pid]");
       if (person) { openPopover(person.dataset.pid, person); return; }
       if (!e.target.closest("#officePopover")) closePopover();
     });

@@ -310,9 +310,15 @@
           <label class="checkbox-label"><input type="checkbox" id="officeSimToggle"> Simulación en vivo</label>
           <button type="button" class="secondary-btn" id="officeAllWorkBtn">📢 Todos a su puesto</button>
           <button type="button" class="secondary-btn" id="officeMeetingBtn">📣 Reunión general</button>
-          <button type="button" class="secondary-btn" id="officeViewBtn">🗺️ Ver en 2D</button>
-          <select id="officeFloorSelect" class="office-floor-select" title="Ir a planta" style="display:none"></select>
-          <span class="hint office-tip">Cada departamento en su planta y cada persona con su despacho. Haz clic en alguien para cambiar su estado.</span>
+          <span class="hint office-tip">Cada persona en su departamento, trabajando 24 h. Haz clic en alguien para ver sus tareas o abrir su cerebro.</span>
+        </div>
+        <div class="card ceo-card">
+          <h3>👔 Pedir al CEO</h3>
+          <form id="ceoForm" class="ceo-form">
+            <textarea id="ceoInput" rows="2" placeholder="Ej. Hay que hacer el onboarding de Rita y de Pedro, sacar tres reels de este vídeo y editar el vídeo de YouTube, crear la miniatura y el título, y cuando esté todo me lo pasas para revisarlo y lo publicamos"></textarea>
+            <button type="submit" class="primary-btn">Enviar al CEO</button>
+          </form>
+          <div id="ceoPlan"></div>
         </div>
         <div class="office-layout">
           <div id="officeFloor" class="office-floor"></div>
@@ -511,9 +517,7 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
 <script src="app.js"></script>
-<script src="office3d.js"></script>
 <script src="office.js"></script>
 </body>
 </html>
