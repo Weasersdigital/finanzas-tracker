@@ -711,6 +711,48 @@
   color: var(--text-muted);
 }
 .form-actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+.field-block { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; }
+.field-block textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+.skills-line { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+.skill-chip {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.person-row .grow { display: flex; flex-direction: column; gap: 2px; }
+.pop-section { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.pop-section h4 { margin: 0 0 6px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.task-list { list-style: none; margin: 0; padding: 0; font-size: 0.82rem; max-height: 160px; overflow: auto; }
+.task-list li { padding: 3px 0; }
+.task-list li.done { color: var(--text-muted); text-decoration: line-through; }
+.task-list label { display: flex; gap: 6px; align-items: flex-start; cursor: pointer; }
+.task-add { display: flex; gap: 6px; margin-top: 6px; }
+.task-add input {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8rem;
+}
+.task-add .secondary-btn { padding: 4px 10px; }
+.pop-edit { margin-top: 8px; font-size: 0.8rem; }
+.office-popover { width: 300px; }
 .inline-form input.emoji-input { flex: none; min-width: 0; width: 56px; text-align: center; }
 
 .office-list { margin-top: 12px; }

@@ -52,21 +52,29 @@
       { id: uid(), name: "Canal propio", emoji: "🎙️", color: "#0f766e" },
     ];
     const people = [
-      ["Arturo", "CEO y creador", 0, "short"], ["Laura", "Directora de operaciones", 0, "long"],
-      ["Mario", "Guionista YouTube (ScriptMaster)", 1, "curly"], ["Claudia", "Guionista Reels y TikTok", 1, "bun"],
-      ["Diego", "Editor Remotion (YouTube)", 2, "curly"], ["Valeria", "Editora de Reels", 2, "long"], ["Nico", "Editor de VSL", 2, "short"],
-      ["Sofía", "Diseñadora de miniaturas", 3, "long"],
-      ["Paula", "Community manager", 4, "bun"], ["Iván", "Gestor de Instagram", 4, "short"],
-      ["Lucía", "Account manager", 5, "long"], ["Hugo", "Onboarding de clientes", 5, "bald"],
-      ["Javier", "Closer de ventas", 6, "short"],
-      ["Marta", "Contable", 7, "bun"],
-      ["Elena", "Productora del canal", 8, "curly"],
-    ].map(([name, role, di, hairStyle], i) => ({
+      ["Arturo", "CEO y creador", 0, "short", "Estrategia de contenido, Negociación, YouTube, Marca personal", "Revisar objetivos del mes|Cerrar propuesta con cliente nuevo|Grabar vídeo del canal"],
+      ["Laura", "Directora de operaciones", 0, "long", "Gestión de proyectos, Notion, Procesos, Planificación", "Planificar entregas de la semana|Revisar carga del equipo de edición|Actualizar el calendario editorial"],
+      ["Mario", "Guionista YouTube (ScriptMaster)", 1, "curly", "ScriptMaster, Storytelling, Retención, Investigación", "Guion de 12 min para cliente A|Transformar transcripción de referencia|Segmentar guion del canal"],
+      ["Claudia", "Guionista Reels y TikTok", 1, "bun", "Ganchos virales, Formatos cortos, Tendencias, Copy", "5 guiones de reels para cliente B|Guion 'Doble personaje'|Buscar vídeos de inspiración"],
+      ["Diego", "Editor Remotion (YouTube)", 2, "curly", "Remotion, React, After Effects, Corrección de color", "Montar vídeo largo cliente A|Modo pantalla 2.0 en el capítulo 3|Exportar máster para YouTube"],
+      ["Valeria", "Editora de Reels", 2, "long", "Remotion, Subtítulos dinámicos, Ritmo, CapCut", "Editar 3 reels cliente B|Subtítulos del reel de hoy|Aplicar estilo Jan × Arturo"],
+      ["Nico", "Editor de VSL", 2, "short", "VSL, Casos de éxito, Motion graphics, Audio", "Montar VSL del lanzamiento|Insertar casos de éxito|Botón de CTA animado"],
+      ["Sofía", "Diseñadora de miniaturas", 3, "long", "Photoshop, Composición, Tipografía, Pruebas A/B", "3 variantes de miniatura vídeo A|Exportar miniatura 1280×720|Revisar CTR de la semana"],
+      ["Paula", "Community manager", 4, "bun", "Instagram, Copywriting, Programación de contenido, Analítica", "Programar reels de la semana|Responder comentarios|Informe de alcance"],
+      ["Iván", "Gestor de Instagram", 4, "short", "Instagram Ads, Crecimiento, Colaboraciones, Stories", "Subir stories del cliente C|Contactar 3 colaboradores|Revisar campaña de ads"],
+      ["Lucía", "Account manager", 5, "long", "Atención al cliente, Fichas de cliente, Seguimiento, Presentaciones", "Actualizar ficha de cliente B|Llamada semanal con cliente A|Enviar entrega del vídeo"],
+      ["Hugo", "Onboarding de clientes", 5, "bald", "Onboarding, Formularios, Documentación, Soporte", "Onboarding del cliente nuevo|Preparar cuestionario inicial|Crear carpeta compartida"],
+      ["Javier", "Closer de ventas", 6, "short", "Ventas, Llamadas de cierre, CRM, Objeciones", "Llamada de cierre a las 12|Seguimiento de 4 leads|Enviar propuesta a cliente D"],
+      ["Marta", "Contable", 7, "bun", "Contabilidad, Facturación, Impuestos, Excel", "Emitir facturas del mes|Cuadrar banco con la app|Preparar el cierre trimestral"],
+      ["Elena", "Productora del canal", 8, "curly", "Producción, Grabación, Iluminación, Planificación de rodajes", "Preparar rodaje del jueves|Lista de ideas para el canal|Analizar retención del último vídeo"],
+    ].map(([name, role, di, hairStyle, skills, tasks], i) => ({
       id: uid(), name, role, deptId: d[di].id, hairStyle,
       skin: SKINS[i % SKINS.length], hair: HAIRS[(i * 3) % HAIRS.length],
       shirt: d[di].color, status: i % 6 === 5 ? "break" : "working",
+      skills: skills.split(",").map(x => x.trim()),
+      tasks: tasks.split("|").map(text => ({ id: uid(), text, done: false })),
     }));
-    return { version: 2, departments: d, people, simulate: true };
+    return { version: 3, departments: d, people, simulate: true };
   }
 
   function load() {
@@ -77,11 +85,28 @@
     return null;
   }
   let data = load();
-  if (!data || data.version !== 2) data = defaultData();
+  if (!data || !data.version || data.version < 2) data = defaultData();
+  if (data.version === 2) {
+    // Datos de ejemplo de la versión anterior (sin conocimientos ni tareas): se completan
+    const fresh = defaultData();
+    const untouched = data.people.every(p => fresh.people.some(f => f.name === p.name && f.role === p.role));
+    if (untouched) data = fresh;
+    else { data.people.forEach(p => { p.skills = p.skills || []; p.tasks = p.tasks || []; }); data.version = 3; }
+  }
   function persist() { localStorage.setItem(KEY, JSON.stringify(data)); }
   persist();
 
   const deptById = id => data.departments.find(d => d.id === id);
+  const skillsOf = p => Array.isArray(p.skills) ? p.skills : [];
+  const tasksOf = p => Array.isArray(p.tasks) ? p.tasks : [];
+  const currentTask = p => tasksOf(p).find(t => !t.done) || null;
+  const parseSkills = str => str.split(/[,\n]/).map(x => x.trim()).filter(Boolean);
+  function parseTasks(str, prev) {
+    return str.split("\n").map(x => x.trim()).filter(Boolean).map(text => {
+      const old = (prev || []).find(t => t.text === text);
+      return old || { id: uid(), text, done: false };
+    });
+  }
 
   // ---------- Avatar ----------
   function avatarHTML(p, extra = "") {
@@ -250,7 +275,8 @@
     const pool = p.status === "meeting"
       ? ["¿Lo vemos el lunes?", "Buena idea 💡", "Apunto eso 📝", "¿Siguiente punto?", "De acuerdo 👍"]
       : (PHRASES[dept?.name] || PHRASES.default);
-    const text = pick(pool);
+    const task = p.status === "working" ? currentTask(p) : null;
+    const text = task && Math.random() < 0.6 ? `📌 ${task.text}` : pick(pool);
     if (use3D()) { window.Office3D.say(p.id, text); return; }
     el.textContent = text;
     el.classList.add("show");
@@ -287,7 +313,13 @@
       <div class="pop-head">${avatarHTML(p, "mini")}<div><strong>${esc(p.name)}</strong><small>${esc(p.role)} · ${esc(d ? d.emoji + " " + d.name : "—")}</small></div>
       <button type="button" class="icon-btn" data-pop-close title="Cerrar">✕</button></div>
       <div class="pop-status">${Object.entries(STATUS).map(([k, s]) =>
-        `<button type="button" class="status-btn ${p.status === k ? "active" : ""}" data-set-status="${k}" style="--c:${s.color}">${s.icon} ${s.label}</button>`).join("")}</div>`;
+        `<button type="button" class="status-btn ${p.status === k ? "active" : ""}" data-set-status="${k}" style="--c:${s.color}">${s.icon} ${s.label}</button>`).join("")}</div>
+      <div class="pop-section"><h4>🧠 Conocimientos</h4>
+        <div class="skills-line">${skillsOf(p).map(k => `<span class="skill-chip">${esc(k)}</span>`).join("") || '<span class="hint">Ninguno todavía</span>'}</div></div>
+      <div class="pop-section"><h4>📋 Tareas</h4>
+        <ul class="task-list">${tasksOf(p).map(t => `<li class="${t.done ? "done" : ""}"><label><input type="checkbox" data-task="${t.id}" ${t.done ? "checked" : ""}> ${esc(t.text)}</label></li>`).join("") || '<li class="hint">Ninguna todavía</li>'}</ul>
+        <form class="task-add" data-task-add><input type="text" placeholder="Nueva tarea…" maxlength="80"><button type="submit" class="secondary-btn">+</button></form></div>
+      <button type="button" class="link-btn pop-edit" data-pop-edit="${p.id}">✏️ Editar ficha completa</button>`;
     pop.dataset.pid = pid;
     const r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor;
     pop.style.top = `${window.scrollY + r.bottom + 6}px`;
@@ -315,8 +347,12 @@
 
     $("#peopleList").innerHTML = data.people.map(p => {
       const d = deptById(p.deptId), s = STATUS[p.status];
-      return `<div class="list-row">${avatarHTML(p, "mini")}
-        <span class="grow"><strong>${esc(p.name)}</strong> <small class="hint">${esc(p.role)} · ${d ? esc(d.emoji + " " + d.name) : "—"}</small></span>
+      const pending = tasksOf(p).filter(t => !t.done).length, total = tasksOf(p).length;
+      return `<div class="list-row person-row">${avatarHTML(p, "mini")}
+        <span class="grow"><strong>${esc(p.name)}</strong> <small class="hint">${esc(p.role)} · ${d ? esc(d.emoji + " " + d.name) : "—"}</small>
+          <span class="skills-line">${skillsOf(p).map(k => `<span class="skill-chip">${esc(k)}</span>`).join("") || '<span class="hint">Sin conocimientos registrados</span>'}</span>
+          ${total ? `<small class="hint">📋 ${pending} de ${total} tareas pendientes${currentTask(p) ? ` · ahora: ${esc(currentTask(p).text)}` : ""}</small>` : '<small class="hint">📋 Sin tareas</small>'}
+        </span>
         <span class="status-pill" style="--c:${s.color}">${s.icon} ${s.label}</span>
         <button class="icon-btn" data-edit-person="${p.id}" title="Editar">✏️</button>
         <button class="icon-btn danger" data-del-person="${p.id}" title="Eliminar">✕</button></div>`;
@@ -338,13 +374,17 @@
       skin: $("#personSkin").value,
       hair: $("#personHair").value,
       hairStyle: $("#personHairStyle").value,
+      skills: parseSkills($("#personSkills").value),
+      tasks: parseTasks($("#personTasks").value, editingTasks),
     };
   }
+  let editingTasks = [];
   function updatePreview() { $("#personPreview").innerHTML = avatarHTML(personFromForm(), "preview"); }
 
   function resetPersonForm() {
     $("#personForm").reset();
     $("#personId").value = "";
+    editingTasks = [];
     $("#personShirt").value = "#4f46e5";
     $("#personSkin").value = pick(SKINS);
     $("#personHair").value = pick(HAIRS);
@@ -416,9 +456,51 @@
         return;
       }
       if (e.target.closest("[data-pop-close]")) { closePopover(); return; }
+      const editBtn = e.target.closest("[data-pop-edit]");
+      if (editBtn) {
+        closePopover();
+        root.querySelector('[data-office-tab="team"]').click();
+        const b = document.querySelector(`[data-edit-person="${editBtn.dataset.popEdit}"]`);
+        if (b) b.click();
+        return;
+      }
+      if (e.target.closest("#officePopover")) {
+        const cb = e.target.closest("[data-task]");
+        if (cb) {
+          const p = data.people.find(x => x.id === $("#officePopover").dataset.pid);
+          const t = p && tasksOf(p).find(t => t.id === cb.dataset.task);
+          if (t) {
+            t.done = cb.checked; persist();
+            cb.closest("li").classList.toggle("done", t.done);
+            if (t.done) logEvent(`✅ <b>${esc(p.name)}</b> termina: ${esc(t.text)}`);
+            if (currentTab === "team") renderTeam();
+          }
+        }
+        return;
+      }
       const person = e.target.closest(".person[data-pid], .away-chip[data-pid]");
       if (person) { openPopover(person.dataset.pid, person); return; }
       if (!e.target.closest("#officePopover")) closePopover();
+    });
+
+    root.addEventListener("submit", e => {
+      const f = e.target.closest("[data-task-add]");
+      if (!f) return;
+      e.preventDefault();
+      const inp = f.querySelector("input");
+      const text = inp.value.trim();
+      const p = data.people.find(x => x.id === $("#officePopover").dataset.pid);
+      if (!text || !p) return;
+      if (!Array.isArray(p.tasks)) p.tasks = [];
+      p.tasks.push({ id: uid(), text, done: false });
+      persist();
+      logEvent(`📌 Nueva tarea para <b>${esc(p.name)}</b>: ${esc(text)}`);
+      const li = document.createElement("li");
+      li.innerHTML = `<label><input type="checkbox" data-task="${p.tasks[p.tasks.length - 1].id}"> ${esc(text)}</label>`;
+      f.previousElementSibling.querySelector(".hint")?.remove();
+      f.previousElementSibling.appendChild(li);
+      inp.value = "";
+      if (currentTab === "team") renderTeam();
     });
 
     // Formulario de persona
@@ -465,6 +547,9 @@
         $("#personId").value = p.id; $("#personName").value = p.name; $("#personRole").value = p.role;
         $("#personDept").value = p.deptId; $("#personStatus").value = p.status; $("#personShirt").value = p.shirt;
         $("#personSkin").value = p.skin; $("#personHair").value = p.hair; $("#personHairStyle").value = p.hairStyle || "short";
+        $("#personSkills").value = skillsOf(p).join(", ");
+        $("#personTasks").value = tasksOf(p).map(t => t.text).join("\n");
+        editingTasks = tasksOf(p);
         $("#personFormTitle").textContent = `Editar a ${p.name}`;
         $("#personSubmitBtn").textContent = "Guardar";
         $("#personCancelBtn").style.display = "";
