@@ -116,6 +116,7 @@
       }
       window.Office3D.sync(data);
       renderStats();
+      renderFloorSelect();
       return;
     }
     if (floor.classList.contains("office-3d")) { floor.classList.remove("office-3d"); window.Office3D.unmount(); }
@@ -185,6 +186,16 @@
     });
 
     renderStats();
+  }
+
+  function renderFloorSelect() {
+    const sel = $("#officeFloorSelect");
+    if (!sel) return;
+    const keep = sel.value;
+    const opts = window.Office3D.floorsList();
+    sel.innerHTML = '<option value="">🏢 Edificio entero</option>' + opts.map(f => `<option value="${f.id}">${esc(f.label)}</option>`).join("");
+    sel.value = opts.some(f => f.id === keep) ? keep : "";
+    sel.style.display = "";
   }
 
   function renderStats() {
@@ -379,7 +390,12 @@
       logEvent(data.simulate ? "▶️ Simulación activada" : "⏸️ Simulación pausada");
     });
     $("#officeViewBtn").addEventListener("click", () => {
-      data.view3d = !use3D(); persist(); renderFloor();
+      data.view3d = !use3D(); persist();
+      $("#officeFloorSelect").style.display = "none";
+      renderFloor();
+    });
+    $("#officeFloorSelect").addEventListener("change", e => {
+      if (use3D()) window.Office3D.focusFloor(e.target.value);
     });
     $("#officeAllWorkBtn").addEventListener("click", () => {
       data.people.forEach(p => { p.status = "working"; });

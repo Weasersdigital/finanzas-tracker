@@ -44,6 +44,15 @@
 }
 
 .office-tip { margin: 0 0 0 auto; }
+.office-floor-select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
 
 .office-layout {
   display: grid;
@@ -570,7 +579,7 @@
   padding: 0;
   overflow: hidden;
   position: relative;
-  height: min(72vh, 640px);
+  height: min(80vh, 760px);
   background: var(--surface-2);
 }
 .office-floor.office-3d canvas {
