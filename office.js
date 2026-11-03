@@ -64,7 +64,7 @@ Reglas:
       ["Valeria", "Editora de reels", 1, "bun", "Remotion, Estilo Jan × Arturo, Transiciones, Audio", "Editar 3 reels del cliente B|Aplicar estilo mostaza al reel 2", ""],
       ["Claudia", "Guionista de reels", 1, "long", "Ganchos virales, Formatos Recrear/Reacción/Doble personaje, Tendencias, Copy", "5 guiones de reels para cliente B|Buscar vídeos de inspiración", ""],
       ["Iván", "Publicador de vídeos", 1, "short", "YouTube Studio, Instagram, Programación, Títulos y descripciones SEO", "Programar los reels de la semana|Publicar vídeo largo A con capítulos", ""],
-      ["Hugo", "Agente de onboarding de clientes", 2, "bald", "Onboarding de clientes, Grupos de WhatsApp, Contratos, HeyGen (app, afiliado y clones), Comunidad Skool, Drive, Llamada de onboarding", "Definir ubicación de grabación de clones|Crear grupo de WhatsApp (Arturo, cliente y Javi)|Enviar documento de onboarding|Enviar contrato para firmar|Enviar enlace de HeyGen (app + afiliado)|Dar acceso a la comunidad de Skool|Fijar llamada de onboarding cuando esté rellenado|Crear carpetas de Drive del cliente|Importar y generar clones en HeyGen tras la grabación", ONBOARDING_PROCESS],
+      ["Hugo", "Agente de onboarding de clientes", 2, "bald", "Onboarding de clientes, Grupos de WhatsApp, Contratos, HeyGen (app, afiliado y clones), Comunidad Skool, Drive, Llamada de onboarding", "Preparar el onboarding del próximo cliente (pídeselo al CEO con su nombre)", ONBOARDING_PROCESS],
       ["Paula", "Gestora de DMs de Instagram", 2, "bun", "Atención por DM, Tono de marca, Cualificación de leads, Respuestas rápidas", "Responder DMs pendientes|Pasar leads cualificados a Arturo", ""],
       ["Marta", "Contable", 3, "curly", "Contabilidad, Facturación, Impuestos, Excel", "Emitir facturas del mes|Cuadrar banco con la app|Preparar el cierre trimestral", ""],
     ].map(([name, role, di, hairStyle, skills, tasks, knowledge], i) => ({
@@ -99,6 +99,7 @@ Reglas:
     if (!Array.isArray(p.skills)) p.skills = [];
     if (!Array.isArray(p.tasks)) p.tasks = [];
     if (!Array.isArray(p.knowledge)) p.knowledge = [];
+    p.tasks.forEach(t => { if (!t.createdAt) t.createdAt = new Date().toISOString(); if (!Array.isArray(t.blockedBy)) t.blockedBy = []; });
   });
   function persist() { localStorage.setItem(KEY, JSON.stringify(data)); }
   persist();
@@ -106,7 +107,55 @@ Reglas:
   const deptById = id => data.departments.find(d => d.id === id);
   const skillsOf = p => Array.isArray(p.skills) ? p.skills : [];
   const tasksOf = p => Array.isArray(p.tasks) ? p.tasks : [];
-  const currentTask = p => tasksOf(p).find(t => !t.done) || null;
+  function taskIndex() {
+    const idx = new Map();
+    data.people.forEach(p => tasksOf(p).forEach(t => idx.set(t.id, { task: t, person: p })));
+    return idx;
+  }
+  function blockers(t, idx) {
+    idx = idx || taskIndex();
+    return (t.blockedBy || []).map(id => idx.get(id)).filter(x => x && !x.task.done);
+  }
+  const isBlocked = (t, idx) => blockers(t, idx).length > 0;
+  const activeTasks = p => { const idx = taskIndex(); return tasksOf(p).filter(t => !t.done && !isBlocked(t, idx)); };
+  const currentTask = p => activeTasks(p)[0] || null;
+  const daysSince = iso => Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  function taskClient(t) { const m = (t.text || "").match(/^\[Onboarding\s+([^\]]+)\]/i); return t.client || (m ? m[1] : null); }
+  function taskLi(t, p, attr, idx) {
+    const bl = blockers(t, idx);
+    const days = !t.done && !bl.length ? daysSince(t.createdAt) : 0;
+    return `<li class="${t.done ? "done" : bl.length ? "blocked" : ""}">
+      <label><input type="checkbox" ${attr}="${t.id}" ${t.done ? "checked" : ""} ${bl.length ? "disabled" : ""}> ${esc(t.text)}</label>
+      ${bl.length ? `<small class="hint">🔒 esperando a ${esc(bl.map(b => b.person.name).filter((v, i, a) => a.indexOf(v) === i).join(", "))}</small>` : ""}
+      ${days >= 2 ? `<small class="late">⏳ ${days} días</small>` : ""}
+      ${t.output ? `<small class="hint">📎 entregado</small>` : ""}
+      ${!t.done ? `<button type="button" class="link-btn work-btn" data-work="${p.id}:${t.id}">▶ Trabajar</button>` : `<button type="button" class="link-btn work-btn" data-work="${p.id}:${t.id}">ver</button>`}
+    </li>`;
+  }
+  function completeTask(p, t, done) {
+    t.done = done;
+    t.doneAt = done ? new Date().toISOString() : null;
+    persist();
+    if (done) {
+      logEvent(`✅ <b>${esc(p.name)}</b> termina: ${esc(t.text)}`);
+      // Desbloquea lo que dependía de esta tarea
+      const idx = taskIndex();
+      data.people.forEach(q => tasksOf(q).forEach(u => {
+        if (u.done || !(u.blockedBy || []).includes(t.id) || isBlocked(u, idx)) return;
+        if (q === ceo()) { logEvent(`📣 <b>Te toca</b>: ${esc(u.text)}`); notify(`📣 Te toca: ${u.text}`); }
+        else logEvent(`🔓 Ahora le toca a <b>${esc(q.name)}</b>: ${esc(u.text)}`);
+      }));
+    }
+    renderFloor();
+    renderInbox();
+    if (currentTab === "team") renderTeam();
+  }
+  function notify(msg) {
+    const el = $("#officeToast");
+    if (!el) return;
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(notify.t); notify.t = setTimeout(() => el.classList.remove("show"), 4000);
+  }
   const parseSkills = str => str.split(/[,\n]/).map(x => x.trim()).filter(Boolean);
   function parseTasks(str, prev) {
     return str.split("\n").map(x => x.trim()).filter(Boolean).map(text => {
@@ -303,9 +352,12 @@ Reglas:
   setInterval(() => { if (isVisible()) sayRandom(); }, 2200);
 
   // ---------- Popover (detalle de persona) ----------
+  let popAnchor = null;
   function openPopover(pid, anchor) {
     const p = data.people.find(x => x.id === pid);
     if (!p) return;
+    popAnchor = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor;
+    anchor = popAnchor;
     const d = deptById(p.deptId);
     const pop = $("#officePopover");
     pop.innerHTML = `
@@ -316,7 +368,7 @@ Reglas:
       <div class="pop-section"><h4>🧠 Conocimientos</h4>
         <div class="skills-line">${skillsOf(p).map(k => `<span class="skill-chip">${esc(k)}</span>`).join("") || '<span class="hint">Ninguno todavía</span>'}</div></div>
       <div class="pop-section"><h4>📋 Tareas</h4>
-        <ul class="task-list">${tasksOf(p).map(t => `<li class="${t.done ? "done" : ""}"><label><input type="checkbox" data-task="${t.id}" ${t.done ? "checked" : ""}> ${esc(t.text)}</label></li>`).join("") || '<li class="hint">Ninguna todavía</li>'}</ul>
+        <ul class="task-list">${(idx => tasksOf(p).map(t => taskLi(t, p, "data-task", idx)).join(""))(taskIndex()) || '<li class="hint">Ninguna todavía</li>'}</ul>
         <form class="task-add" data-task-add><input type="text" placeholder="Nueva tarea…" maxlength="80"><button type="submit" class="secondary-btn">+</button></form></div>
       <div class="pop-actions"><button type="button" class="primary-btn" data-open-brain="${p.id}">🧠 Abrir cerebro</button>
       <button type="button" class="link-btn pop-edit" data-pop-edit="${p.id}">✏️ Editar ficha</button></div>`;
@@ -347,11 +399,11 @@ Reglas:
 
     $("#peopleList").innerHTML = data.people.map(p => {
       const d = deptById(p.deptId), s = STATUS[p.status];
-      const pending = tasksOf(p).filter(t => !t.done).length, total = tasksOf(p).length;
+      const pending = tasksOf(p).filter(t => !t.done).length, total = tasksOf(p).length, blocked = tasksOf(p).filter(t => !t.done && isBlocked(t)).length;
       return `<div class="list-row person-row">${avatarHTML(p, "mini")}
         <span class="grow"><strong>${esc(p.name)}</strong> <small class="hint">${esc(p.role)} · ${d ? esc(d.emoji + " " + d.name) : "—"}</small>
           <span class="skills-line">${skillsOf(p).map(k => `<span class="skill-chip">${esc(k)}</span>`).join("") || '<span class="hint">Sin conocimientos registrados</span>'}</span>
-          ${total ? `<small class="hint">📋 ${pending} de ${total} tareas pendientes${currentTask(p) ? ` · ahora: ${esc(currentTask(p).text)}` : ""}</small>` : '<small class="hint">📋 Sin tareas</small>'}
+          ${total ? `<small class="hint">📋 ${pending} de ${total} pendientes${blocked ? ` (${blocked} en espera)` : ""}${currentTask(p) ? ` · ahora: ${esc(currentTask(p).text)}` : ""}</small>` : '<small class="hint">📋 Sin tareas</small>'}
         </span>
         <span class="status-pill" style="--c:${s.color}">${s.icon} ${s.label}</span>
         <button class="icon-btn" data-open-brain="${p.id}" title="Cerebro (${(p.knowledge || []).length} conocimientos)">🧠</button>
@@ -472,10 +524,10 @@ Reglas:
     const boss = ceo();
     const workers = data.people.filter(p => p !== boss).map(p => ({ p, kw: workerKeywords(p) }));
     const items = [];
-    const add = (person, task, matches, why) => {
+    const add = (person, task, matches, why, client) => {
       let it = items.find(x => x.pid === person.id);
       if (!it) { it = { pid: person.id, tasks: [], matches: [], why }; items.push(it); }
-      if (!it.tasks.includes(task)) it.tasks.push(task);
+      if (!it.tasks.some(t => t.text === task)) it.tasks.push({ text: task, kind: matches[0] || "otro", client: client || null });
       matches.forEach(m => { if (!it.matches.includes(m)) it.matches.push(m); });
     };
     let reviewSeen = false, unmatched = [];
@@ -496,8 +548,8 @@ Reglas:
           const steps = proc ? proc.content.split("\n").map(l => (l.match(/^\s*\d+[.)]\s*(.+)$/) || [])[1]).filter(Boolean) : [];
           (names.length ? names : [""]).forEach(n => {
             const tag = n ? `[Onboarding ${n}]` : "[Onboarding]";
-            if (steps.length) steps.forEach(st => add(best.p, `${tag} ${st.trim()}`, ["onboarding"], "onboarding"));
-            else add(best.p, n ? `Onboarding de ${n}` : text, ["onboarding"], "onboarding");
+            if (steps.length) steps.forEach(st => add(best.p, `${tag} ${st.trim()}`, ["onboarding"], "onboarding", n || null));
+            else add(best.p, n ? `Onboarding de ${n}` : text, ["onboarding"], "onboarding", n || null);
           });
           return;
         }
@@ -513,7 +565,7 @@ Reglas:
       chosen.forEach(x => {
         let task = text;
         if (x.matches.includes("publicar") && reviewSeen) task += ` (cuando ${boss.name} lo haya revisado)`;
-        add(x.w.p, task, x.matches, x.matches.join(", "));
+        add(x.w.p, task, x.matches.includes("publicar") ? ["publicar", ...x.matches.filter(m => m !== "publicar")] : x.matches, x.matches.join(", "));
       });
     });
     unmatched.forEach(t => add(boss, `Por asignar: ${t}`, ["sin encaje"], "sin encaje"));
@@ -546,16 +598,16 @@ Reglas:
           <div class="plan-head">${avatarHTML(p, "mini")}<select data-plan-pid="${i}">${options(it.pid)}</select>
             <small class="hint">por: ${esc(it.matches.join(", "))}</small>
             <button type="button" class="icon-btn danger" data-plan-del="${i}" title="Quitar">✕</button></div>
-          <ul>${it.tasks.map((t, j) => `<li><input type="text" value="${esc(t)}" data-plan-task="${i}:${j}"></li>`).join("")}</ul>
+          <ul>${it.tasks.map((t, j) => `<li><input type="text" value="${esc(t.text)}" data-plan-task="${i}:${j}"></li>`).join("")}</ul>
         </div>`; }).join("")}</div>
       <div class="ceo-actions"><button type="button" class="primary-btn" id="ceoConfirmBtn">✅ Confirmar reparto</button>
         <button type="button" class="link-btn" id="ceoCancelBtn">Cancelar</button></div>`;
     box.querySelectorAll("[data-plan-pid]").forEach(sel => sel.addEventListener("change", () => { pendingPlan.items[+sel.dataset.planPid].pid = sel.value; }));
-    box.querySelectorAll("[data-plan-task]").forEach(inp => inp.addEventListener("input", () => { const [i, j] = inp.dataset.planTask.split(":").map(Number); pendingPlan.items[i].tasks[j] = inp.value; }));
+    box.querySelectorAll("[data-plan-task]").forEach(inp => inp.addEventListener("input", () => { const [i, j] = inp.dataset.planTask.split(":").map(Number); pendingPlan.items[i].tasks[j].text = inp.value; }));
     box.querySelectorAll("[data-plan-del]").forEach(b => b.addEventListener("click", () => { pendingPlan.items.splice(+b.dataset.planDel, 1); if (!pendingPlan.items.length) pendingPlan = null; renderPlan(); }));
     // Si se cambia el responsable, se fusionan filas duplicadas al confirmar
     $("#ceoConfirmBtn").addEventListener("click", () => {
-      confirmPlan(pendingPlan.items.map(it => ({ person: data.people.find(x => x.id === it.pid), tasks: it.tasks.filter(t => t.trim()) })), pendingPlan.request);
+      confirmPlan(pendingPlan.items.map(it => ({ person: data.people.find(x => x.id === it.pid), tasks: it.tasks.filter(t => t.text.trim()) })), pendingPlan.request);
     });
     $("#ceoCancelBtn").addEventListener("click", () => { pendingPlan = null; renderPlan(); });
   }
@@ -564,15 +616,26 @@ Reglas:
     const assigned = [];
     const merged = [];
     items.forEach(({ person, tasks }) => { if (!person) return; const m = merged.find(x => x.person === person); if (m) m.tasks.push(...tasks); else merged.push({ person, tasks: [...tasks] }); });
+    const requestId = uid(), created = [];
     merged.forEach(({ person, tasks }) => {
       if (!person || !tasks.length) return;
       if (!Array.isArray(person.tasks)) person.tasks = [];
-      tasks.forEach(text => person.tasks.push({ id: uid(), text, done: false }));
+      tasks.forEach(t => {
+        const task = { id: uid(), text: t.text, kind: t.kind || "otro", client: t.client || null, done: false, createdAt: new Date().toISOString(), blockedBy: [], requestId };
+        person.tasks.push(task); created.push({ task, person });
+      });
       assigned.push(person);
-      logEvent(person === boss ? `📌 <b>${esc(boss.name)}</b> se queda: ${esc(tasks.length === 1 ? tasks[0] : tasks.length + " tareas")}` : `📌 <b>${esc(boss.name)}</b> asigna a <b>${esc(person.name)}</b>: ${esc(tasks.length === 1 ? tasks[0] : tasks.length + " tareas")}`);
+      logEvent(person === boss ? `📌 <b>${esc(boss.name)}</b> se queda: ${esc(tasks.length === 1 ? tasks[0].text : tasks.length + " tareas")}` : `📌 <b>${esc(boss.name)}</b> asigna a <b>${esc(person.name)}</b>: ${esc(tasks.length === 1 ? tasks[0].text : tasks.length + " tareas")}`);
     });
+    // Encadenado: producción → revisión del CEO → publicación
+    const prod = created.filter(c => c.task.kind !== "revision" && c.task.kind !== "publicar");
+    const rev = created.filter(c => c.task.kind === "revision");
+    const pub = created.filter(c => c.task.kind === "publicar");
+    rev.forEach(c => { c.task.blockedBy = prod.map(x => x.task.id); });
+    pub.forEach(c => { c.task.blockedBy = (rev.length ? rev : prod).map(x => x.task.id); });
+    if (rev.length && prod.length) logEvent(`🔗 La revisión de <b>${esc(boss.name)}</b> espera a ${prod.length} tareas; la publicación, a la revisión.`);
     if (!Array.isArray(data.requests)) data.requests = [];
-    data.requests.unshift({ id: uid(), text: request, at: new Date().toISOString(), to: assigned.map(p => p.id) });
+    data.requests.unshift({ id: requestId, text: request, at: new Date().toISOString(), to: assigned.map(p => p.id) });
     data.requests.length = Math.min(data.requests.length, 50);
     persist();
     pendingPlan = null;
@@ -583,8 +646,149 @@ Reglas:
       if (pids.length >= 2) startMeeting(pids, `${boss.name} reparte: ${shortText(request)}`);
     }
     renderFloor();
+    renderInbox();
     if (currentTab === "team") renderTeam();
   }
+
+  // ---------- Bandeja del jefe: lo que te toca a ti y lo que lleva días parado ----------
+  function renderInbox() {
+    const el = $("#officeInbox");
+    if (!el) return;
+    const boss = ceo();
+    const idx = taskIndex();
+    const mine = boss ? tasksOf(boss).filter(t => !t.done && !isBlocked(t, idx)) : [];
+    const late = [];
+    data.people.forEach(p => tasksOf(p).forEach(t => { if (!t.done && !isBlocked(t, idx) && daysSince(t.createdAt) >= 2 && p !== boss) late.push({ t, p }); }));
+    late.sort((a, b) => daysSince(b.t.createdAt) - daysSince(a.t.createdAt));
+    const waiting = [];
+    data.people.forEach(p => tasksOf(p).forEach(t => { if (!t.done && isBlocked(t, idx)) waiting.push({ t, p }); }));
+    if (!mine.length && !late.length && !waiting.length) { el.style.display = "none"; return; }
+    el.style.display = "";
+    el.innerHTML = `
+      ${mine.length ? `<h4>📣 Te toca a ti (${mine.length})</h4><ul class="task-list">${mine.map(t => taskLi(t, boss, "data-task-inbox", idx)).join("")}</ul>` : ""}
+      ${late.length ? `<h4>⏳ Lleva días parado</h4><ul class="task-list">${late.slice(0, 6).map(({ t, p }) => `<li><span><b>${esc(p.name)}</b>: ${esc(t.text)} <small class="late">${daysSince(t.createdAt)} días</small></span> <button type="button" class="link-btn work-btn" data-work="${p.id}:${t.id}">▶ Trabajar</button></li>`).join("")}</ul>` : ""}
+      ${waiting.length ? `<details><summary class="hint">🔒 ${waiting.length} tareas en espera de otras</summary><ul class="task-list">${waiting.map(({ t, p }) => `<li><span><b>${esc(p.name)}</b>: ${esc(t.text)}</span> <small class="hint">esperando a ${esc(blockers(t, idx).map(b => b.person.name).filter((v, i, a) => a.indexOf(v) === i).join(", "))}</small></li>`).join("")}</ul></details>` : ""}`;
+  }
+
+  // ---------- Mesa de trabajo: cada trabajador prepara su tarea ----------
+  const DEFAULT_TEMPLATES = {
+    bienvenida: "Hola {cliente}, ¡bienvenido/a! Soy {yo}, del equipo de {ceo}. A partir de ahora me encargo de que tu arranque sea fácil. En los próximos días te iré pasando todo lo que necesitamos. Cualquier duda, por aquí.",
+    "documento de onboarding": "Hola {cliente}, aquí tienes el documento de onboarding: {link}\nCuando lo tengas rellenado, avísame y fijamos la llamada de onboarding.",
+    contrato: "Hola {cliente}, te paso el contrato para firmar: {link}\nEn cuanto esté firmado seguimos con el resto.",
+    heygen: "Hola {cliente}, para los clones necesitamos que te descargues la app de HeyGen. Este es el enlace: {link}\nCrea la cuenta con ese enlace y me dices cuando la tengas.",
+    skool: "Hola {cliente}, ya tienes acceso a la comunidad: {link}\nEntra y preséntate cuando quieras.",
+    grupo: "Creo este grupo para coordinar la grabación y el contenido de {cliente}. Estamos {ceo}, Javi (cámara) y yo. Próximo paso: definir dónde y cuándo grabamos los clones.",
+    llamada: "Hola {cliente}, ya tenemos tu onboarding rellenado. ¿Qué día te viene bien para la llamada de onboarding (30 min)? Te paso opciones: ...",
+    dm: "¡Hola! Gracias por escribir 🙌 Cuéntame un poco qué estás buscando y te digo cómo podemos ayudarte.",
+    revision: "Ya está todo listo para tu revisión. Cuando des el OK, se publica.",
+  };
+  const DRIVE_FOLDERS = ["01 Onboarding", "02 Material en bruto", "03 Vídeos largos", "04 Clips", "05 Reels", "06 Miniaturas", "07 Guiones", "08 Publicado"];
+
+  function fill(tpl, ctx) { return tpl.replace(/\{(\w+)\}/g, (_, k) => ctx[k] != null ? ctx[k] : `{${k}}`); }
+  function brainTemplate(p, key) {
+    const k = tokens(key);
+    const note = (p.knowledge || []).filter(x => x.type !== "enlace" && /^plantilla/i.test(x.title)).map(x => ({ x, score: [...tokens(x.title.replace(/^plantilla:?/i, ""))].filter(t => k.has(t)).length })).filter(x => x.score > 0).sort((a, b) => b.score - a.score)[0];
+    return note ? note.x.content : null;
+  }
+  function brainLink(p, words) {
+    const k = tokens(words);
+    const best = (p.knowledge || []).filter(x => x.type === "enlace").map(x => ({ x, score: [...tokens(x.title)].filter(t => k.has(t)).length })).filter(x => x.score > 0).sort((a, b) => b.score - a.score)[0];
+    return best ? best.x.content : null;
+  }
+  function financeReport() {
+    const load = k => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch (_) { return []; } };
+    const tx = load("ft_transactions"), rec = load("ft_recurring");
+    const month = new Date().toISOString().slice(0, 7);
+    const inMonth = tx.filter(t => (t.date || "").slice(0, 7) === month);
+    const sum = (arr, type, scope) => arr.filter(t => t.type === type && (!scope || t.scope === scope)).reduce((a, t) => a + Number(t.amount || 0), 0);
+    const fmt = n => n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
+    const pendingFixed = rec.filter(r => !tx.some(t => t.recurringId === r.id && (t.date || "").slice(0, 7) === month));
+    const lines = [
+      `Informe de ${month}`,
+      `Empresa: ingresos ${fmt(sum(inMonth, "income", "empresa"))} · gastos ${fmt(sum(inMonth, "expense", "empresa"))} · balance ${fmt(sum(inMonth, "income", "empresa") - sum(inMonth, "expense", "empresa"))}`,
+      `Personal: ingresos ${fmt(sum(inMonth, "income", "personal"))} · gastos ${fmt(sum(inMonth, "expense", "personal"))}`,
+      `Movimientos del mes: ${inMonth.length}`,
+      pendingFixed.length ? `Gastos fijos sin registrar este mes: ${pendingFixed.map(r => `${r.name} (${fmt(Number(r.amount))})`).join(", ")}` : "Todos los gastos fijos del mes están registrados.",
+    ];
+    return { text: lines.join("\n"), pendingFixed };
+  }
+
+  // Devuelve { actions:[{label, href}], messages:[{title, text}], notes:[string], checklist:[string] }
+  function prepareTask(p, t) {
+    const boss = ceo();
+    const ctx = { cliente: taskClient(t) || "{cliente}", yo: p.name, ceo: boss ? boss.name : "" };
+    const txt = (t.text || "").toLowerCase();
+    const has = re => re.test(txt);
+    const out = { actions: [], messages: [], notes: [], checklist: [] };
+    const msg = (title, key, link) => { const tpl = brainTemplate(p, key) || DEFAULT_TEMPLATES[key]; if (tpl) out.messages.push({ title, text: fill(tpl, Object.assign({ link: link || "{enlace}" }, ctx)) }); };
+    const needLink = (what, words) => { const l = brainLink(p, words); if (l) out.actions.push({ label: `🔗 Abrir ${what}`, href: l }); else out.notes.push(`Falta el enlace de «${what}». Añádelo en el cerebro de ${p.name} como enlace con ese título y lo usaré aquí.`); return l; };
+
+    if (has(/whatsapp|grupo/)) { out.actions.push({ label: "💬 Abrir WhatsApp Web", href: "https://web.whatsapp.com/" }); msg("Primer mensaje del grupo", "grupo"); out.checklist.push(`Crear el grupo «${ctx.cliente} × ${ctx.ceo}» con ${ctx.ceo}, el cliente y Javi`, "Pegar el primer mensaje"); }
+    if (has(/documento de onboarding|cuestionario/)) { const l = needLink("documento de onboarding", "documento onboarding cuestionario formulario"); msg("Mensaje para enviar el documento", "documento de onboarding", l); }
+    if (has(/contrato/)) { const l = needLink("contrato", "contrato firma"); msg("Mensaje con el contrato", "contrato", l); }
+    if (has(/heygen/) && !has(/clones de inteligencia|importar/)) { const l = needLink("HeyGen (enlace de afiliado)", "heygen afiliado app"); msg("Mensaje de HeyGen", "heygen", l); }
+    if (has(/skool|comunidad/)) { const l = needLink("comunidad de Skool", "skool comunidad"); out.actions.push({ label: "👥 Abrir Skool", href: l || "https://www.skool.com/" }); msg("Mensaje de acceso a la comunidad", "skool", l); }
+    if (has(/llamada|kickoff|reuni[oó]n con/)) {
+      const title = encodeURIComponent(`Llamada de onboarding · ${ctx.cliente}`), details = encodeURIComponent(`Onboarding de ${ctx.cliente}. Repasar documento de onboarding, grabación de clones y calendario de contenidos.`);
+      out.actions.push({ label: "📅 Crear la llamada en Google Calendar", href: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}` });
+      msg("Mensaje para fijar la llamada", "llamada");
+      out.checklist.push("Confirmar que el documento de onboarding está rellenado antes de fijarla");
+    }
+    if (has(/drive|carpeta/)) { const l = brainLink(p, "drive clientes carpeta"); out.actions.push({ label: "📁 Abrir Google Drive", href: l || "https://drive.google.com/drive/my-drive" }); out.messages.push({ title: `Estructura de carpetas para ${ctx.cliente}`, text: `${ctx.cliente}/\n` + DRIVE_FOLDERS.map(f => `  ${f}/`).join("\n") }); out.checklist.push(`Crear la carpeta «${ctx.cliente}» y las subcarpetas`, "Compartirla con el cliente y con Contenido"); }
+    if (has(/ubicaci[oó]n|grabaci[oó]n/) && !has(/importar/)) { out.checklist.push("Preguntar al cliente ciudad y disponibilidad", "Confirmar fecha y lugar con Javi (cámara)", "Apuntarlo en el grupo de WhatsApp"); out.actions.push({ label: "📅 Reservar la grabación en Calendar", href: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("Grabación de clones · " + ctx.cliente)}` }); }
+    if (has(/clones de inteligencia|importar/)) { out.actions.push({ label: "🎭 Abrir HeyGen", href: "https://app.heygen.com/" }); out.checklist.push("Subir el vídeo de la grabación", "Crear el avatar (clon) y la voz", "Hacer un vídeo de prueba y validarlo con el cliente"); }
+    if (has(/bienvenida/) || (t.kind === "onboarding" && !out.messages.length && !out.checklist.length)) msg("Mensaje de bienvenida", "bienvenida");
+    if (t.kind === "dm" || has(/\bdm|mensajes|instagram/)) { out.actions.push({ label: "📩 Abrir bandeja de Instagram", href: "https://www.instagram.com/direct/inbox/" }); msg("Respuesta tipo", "dm"); (p.knowledge || []).filter(x => /^plantilla/i.test(x.title) && x.type !== "enlace").forEach(x => { if (!out.messages.some(m => m.text === x.content)) out.messages.push({ title: x.title.replace(/^plantilla:?\s*/i, ""), text: x.content }); }); }
+    if (t.kind === "publicar" || has(/publicar|programar|subir/)) { out.actions.push({ label: "▶️ Abrir YouTube Studio", href: "https://studio.youtube.com/" }, { label: "📱 Abrir Instagram", href: "https://www.instagram.com/" }); out.checklist.push("Título (máx. 60 caracteres)", "Descripción con capítulos y enlaces", "Miniatura subida", "Etiquetas y categoría", "Programar fecha y hora", "Avisar a " + ctx.ceo); }
+    if (t.kind === "titulo" || has(/t[ií]tulo/)) { out.checklist.push("3 opciones de título (curiosidad, beneficio, número)", "Descripción de 2–3 líneas con la promesa del vídeo"); out.messages.push({ title: "Plantilla de título y descripción", text: "Título A: …\nTítulo B: …\nTítulo C: …\n\nDescripción:\n…\n\nCapítulos:\n00:00 Intro\n" }); }
+    if (t.kind === "miniatura" || has(/miniatura/)) { out.checklist.push("3 variantes (cara + 3 palabras máx.)", "Exportar 1280×720, < 2 MB", "Subir a Drive › 06 Miniaturas y pegar el enlace como entregable"); out.actions.push({ label: "📁 Abrir Drive", href: brainLink(p, "drive") || "https://drive.google.com/drive/my-drive" }); }
+    if (t.kind === "edicion" || t.kind === "youtube" || has(/editar|montar/)) { out.checklist.push("Descargar el bruto de Drive › 02 Material en bruto", "Montaje, modos de cámara/pantalla y animaciones", "Subtítulos y máster para YouTube", "Subir a Drive › 03 Vídeos largos y pegar el enlace como entregable"); out.actions.push({ label: "📁 Abrir Drive", href: brainLink(p, "drive") || "https://drive.google.com/drive/my-drive" }); }
+    if (t.kind === "clips" || has(/clips?|sacar/)) { out.checklist.push("Ver el vídeo largo y marcar los momentos con gancho", "Reencuadrar a 9:16 y subtitular", "Subir a Drive › 04 Clips"); out.actions.push({ label: "📁 Abrir Drive", href: brainLink(p, "drive") || "https://drive.google.com/drive/my-drive" }); }
+    if (t.kind === "reels" || t.kind === "guion") { out.checklist.push("Elegir formato (Recrear, Reacción, Doble personaje…)", "Gancho en los 2 primeros segundos", "Guardar en Drive › 07 Guiones o 05 Reels"); }
+    if (t.kind === "finanzas" || has(/factura|cobro|balance|cierre|contab|impuesto/)) {
+      const r = financeReport();
+      out.messages.push({ title: "Informe de Finanzas (datos reales de la app)", text: r.text });
+      out.actions.push({ label: "💰 Ir a Finanzas", href: "#finanzas" });
+      if (r.pendingFixed.length) out.checklist.push(`Registrar ${r.pendingFixed.length} gastos fijos pendientes en Finanzas › Gastos fijos`);
+      if (has(/factura/)) out.checklist.push("Emitir las facturas del mes", "Registrar cada cobro como ingreso de empresa");
+    }
+    if (t.kind === "revision") { out.checklist.push("Revisar cada entregable (enlaces abajo)", "Si está OK, marcar como hecha: la publicación se desbloquea sola"); const idx = taskIndex(); (t.blockedBy || []).map(id => idx.get(id)).filter(Boolean).forEach(({ task, person }) => { if (task.output) out.actions.push({ label: `📎 ${person.name}: ${task.text.slice(0, 40)}`, href: /^https?:/.test(task.output) ? task.output : null, text: task.output }); else out.notes.push(`${person.name} aún no ha dejado entregable en «${task.text}».`); }); }
+    if (!out.actions.length && !out.messages.length && !out.checklist.length) out.notes.push("Esta tarea no tiene automatización: hazla y marca como hecha. Si tiene un proceso fijo, escríbelo en el cerebro de " + p.name + " como nota con pasos numerados y la próxima vez la desgloso.");
+    return out;
+  }
+
+  let workPid = null, workTid = null;
+  function openWork(pid, tid) {
+    const p = data.people.find(x => x.id === pid); const t = p && tasksOf(p).find(x => x.id === tid);
+    if (!t) return;
+    workPid = pid; workTid = tid;
+    const prep = prepareTask(p, t);
+    const bl = blockers(t);
+    const d = deptById(p.deptId);
+    $("#workTitle").innerHTML = `${avatarHTML(p, "mini")} <span>${esc(t.text)}<small class="hint">${esc(p.name)} · ${esc(p.role)} · ${d ? esc(d.emoji + " " + d.name) : ""}${taskClient(t) ? " · cliente: " + esc(taskClient(t)) : ""}</small></span>`;
+    $("#workBody").innerHTML = `
+      ${t.done ? `<p class="ceo-reply">✅ Hecha el ${new Date(t.doneAt || t.createdAt).toLocaleString("es")}.</p>` : bl.length ? `<p class="ceo-reply">🔒 Bloqueada hasta que terminen: ${bl.map(b => `<b>${esc(b.person.name)}</b> (${esc(b.task.text)})`).join(", ")}.</p>` : `<p class="ceo-reply">▶ <b>${esc(p.name)}</b> ha preparado esto para que lo ejecutes en un clic:</p>`}
+      ${prep.notes.map(n => `<p class="work-note">⚠️ ${esc(n)}</p>`).join("")}
+      ${prep.actions.length ? `<div class="work-actions">${prep.actions.map(a => a.href ? `<a class="secondary-btn" href="${esc(a.href)}" target="_blank" rel="noopener">${esc(a.label)}</a>` : `<span class="secondary-btn" title="${esc(a.text || "")}">${esc(a.label)}: ${esc((a.text || "").slice(0, 60))}</span>`).join("")}</div>` : ""}
+      ${prep.checklist.length ? `<h4>Pasos</h4><ul class="work-checklist">${prep.checklist.map((c, i) => `<li><label><input type="checkbox" data-step="${i}" ${(t.steps || [])[i] ? "checked" : ""}> ${esc(c)}</label></li>`).join("")}</ul>` : ""}
+      ${prep.messages.map((m, i) => `<div class="work-msg"><div class="work-msg-head"><strong>${esc(m.title)}</strong><button type="button" class="link-btn" data-copy="${i}">📋 Copiar</button></div><textarea data-msg="${i}" rows="${Math.min(8, m.text.split("\n").length + 1)}">${esc(m.text)}</textarea></div>`).join("")}
+      <h4>Entregable</h4>
+      <div class="work-output"><input type="text" id="workOutput" placeholder="Enlace (Drive, YouTube…) o texto corto con el resultado" value="${esc(t.output || "")}"><button type="button" class="secondary-btn" id="workSaveBtn">💾 Guardar</button></div>
+      <div class="ceo-actions">
+        ${!t.done && !bl.length ? `<button type="button" class="primary-btn" id="workDoneBtn">✅ Marcar como hecha</button>` : ""}
+        ${t.done ? `<button type="button" class="secondary-btn" id="workUndoBtn">↩️ Reabrir</button>` : ""}
+        <button type="button" class="link-btn" data-open-brain="${p.id}">🧠 Cerebro de ${esc(p.name)}</button>
+      </div>`;
+    const body = $("#workBody");
+    body.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => { const ta = body.querySelector(`[data-msg="${b.dataset.copy}"]`); try { await navigator.clipboard.writeText(ta.value); b.textContent = "✅ Copiado"; setTimeout(() => b.textContent = "📋 Copiar", 1500); } catch (_) { ta.select(); } }));
+    body.querySelectorAll("[data-step]").forEach(cb => cb.addEventListener("change", () => { t.steps = t.steps || []; t.steps[+cb.dataset.step] = cb.checked; persist(); }));
+    $("#workSaveBtn").addEventListener("click", () => { t.output = $("#workOutput").value.trim() || null; persist(); logEvent(`📎 <b>${esc(p.name)}</b> entrega: ${esc(t.text)}`); notify("Entregable guardado"); renderInbox(); });
+    const dn = $("#workDoneBtn"); if (dn) dn.addEventListener("click", () => { t.output = $("#workOutput").value.trim() || t.output || null; completeTask(p, t, true); closeWork(); });
+    const un = $("#workUndoBtn"); if (un) un.addEventListener("click", () => { completeTask(p, t, false); openWork(pid, tid); });
+    body.querySelector("[data-open-brain]").addEventListener("click", () => { closeWork(); openBrain(p.id); });
+    $("#workOverlay").classList.add("open");
+  }
+  function closeWork() { $("#workOverlay").classList.remove("open"); workPid = workTid = null; }
 
   // ---------- Cerebro de cada trabajador ----------
   let brainPid = null, recognition = null, dictating = false;
@@ -610,7 +814,7 @@ Reglas:
     const d = deptById(p.deptId);
     $("#brainTitle").innerHTML = `${avatarHTML(p, "mini")} <span>🧠 Cerebro de ${esc(p.name)} <small class="hint">${esc(p.role)} · ${d ? esc(d.emoji + " " + d.name) : ""}</small></span>`;
     $("#brainSkills").innerHTML = skillsOf(p).map(k => `<span class="skill-chip">${esc(k)}</span>`).join("") || '<span class="hint">Sin conocimientos registrados. Añádelos en «Editar ficha».</span>';
-    $("#brainTasks").innerHTML = tasksOf(p).map(t => `<li class="${t.done ? "done" : ""}"><label><input type="checkbox" data-brain-task="${t.id}" ${t.done ? "checked" : ""}> ${esc(t.text)}</label></li>`).join("") || '<li class="hint">Sin tareas.</li>';
+    $("#brainTasks").innerHTML = (idx => tasksOf(p).map(t => taskLi(t, p, "data-brain-task", idx)).join(""))(taskIndex()) || '<li class="hint">Sin tareas.</li>';
     const items = p.knowledge || [];
     $("#brainCount").textContent = items.length ? `${items.length} ${items.length === 1 ? "elemento" : "elementos"} · ${fmtSize(JSON.stringify(items).length)}` : "Vacío";
     $("#brainList").innerHTML = items.slice().reverse().map(k => `
@@ -743,9 +947,7 @@ Reglas:
       const p = brainPerson();
       const t = p && tasksOf(p).find(t => t.id === cb.dataset.brainTask);
       if (!t) return;
-      t.done = cb.checked; persist(); renderBrain();
-      if (t.done) logEvent(`✅ <b>${esc(p.name)}</b> termina: ${esc(t.text)}`);
-      if (currentTab === "team") renderTeam();
+      completeTask(p, t, cb.checked); renderBrain();
     });
     $("#brainCopyBtn").addEventListener("click", async () => {
       const p = brainPerson();
@@ -782,6 +984,21 @@ Reglas:
       data.simulate = e.target.checked; persist();
       logEvent(data.simulate ? "▶️ Simulación activada" : "⏸️ Simulación pausada");
     });
+    document.addEventListener("click", e => {
+      const w = e.target.closest("[data-work]");
+      if (w) { e.preventDefault(); const [pid, tid] = w.dataset.work.split(":"); closePopover(); openWork(pid, tid); return; }
+      const link = e.target.closest('a[href="#finanzas"]');
+      if (link) { e.preventDefault(); closeWork(); document.querySelector('.module-btn[data-module="finance"]').click(); }
+    });
+    document.addEventListener("change", e => {
+      const cb = e.target.closest("[data-task-inbox]");
+      if (!cb) return;
+      const boss = ceo(); const t = tasksOf(boss).find(x => x.id === cb.dataset.taskInbox);
+      if (t) completeTask(boss, t, cb.checked);
+    });
+    $("#workCloseBtn").addEventListener("click", closeWork);
+    $("#workOverlay").addEventListener("click", e => { if (e.target === $("#workOverlay")) closeWork(); });
+    renderInbox();
     $("#ceoForm").addEventListener("submit", e => {
       e.preventDefault();
       const text = $("#ceoInput").value.trim();
@@ -823,12 +1040,7 @@ Reglas:
         if (cb) {
           const p = data.people.find(x => x.id === $("#officePopover").dataset.pid);
           const t = p && tasksOf(p).find(t => t.id === cb.dataset.task);
-          if (t) {
-            t.done = cb.checked; persist();
-            cb.closest("li").classList.toggle("done", t.done);
-            if (t.done) logEvent(`✅ <b>${esc(p.name)}</b> termina: ${esc(t.text)}`);
-            if (currentTab === "team") renderTeam();
-          }
+          if (t) { completeTask(p, t, cb.checked); if (popAnchor) openPopover(p.id, popAnchor); }
         }
         return;
       }

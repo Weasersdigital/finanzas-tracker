@@ -320,6 +320,7 @@
           </form>
           <div id="ceoPlan"></div>
         </div>
+        <div class="card office-inbox" id="officeInbox" style="display:none"></div>
         <div class="office-layout">
           <div id="officeFloor" class="office-floor"></div>
           <aside class="card office-feed-card">
@@ -441,6 +442,18 @@
     </form>
   </div>
 </div>
+
+<!-- Mesa de trabajo de una tarea -->
+<div id="workOverlay" class="modal-overlay">
+  <div class="modal work-modal">
+    <div class="brain-head">
+      <h3 id="workTitle"></h3>
+      <button type="button" class="icon-btn" id="workCloseBtn" title="Cerrar">✕</button>
+    </div>
+    <div id="workBody"></div>
+  </div>
+</div>
+<div id="officeToast" class="toast office-toast"></div>
 
 <!-- Cerebro de un trabajador -->
 <div id="brainOverlay" class="modal-overlay">

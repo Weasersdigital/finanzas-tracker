@@ -816,3 +816,29 @@
 .plan-item input[type="text"] { width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; }
 .ceo-actions { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
 @media (max-width: 560px) { .ceo-form { flex-direction: column; } }
+
+/* ----- Tareas encadenadas, bandeja y mesa de trabajo ----- */
+.task-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.task-list li label { flex: 1; min-width: 0; }
+.task-list li.blocked { color: var(--text-muted); }
+.task-list li.blocked label { cursor: not-allowed; }
+.task-list .work-btn { font-size: 0.75rem; margin-left: auto; }
+.late { color: var(--warn); font-weight: 700; font-size: 0.72rem; }
+.office-inbox { margin-bottom: 16px; border-left: 4px solid var(--accent); }
+.office-inbox h4 { margin: 4px 0 6px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.office-inbox .task-list { font-size: 0.86rem; }
+.office-inbox details { margin-top: 8px; }
+.work-modal { max-width: 760px; max-height: 92vh; overflow: auto; }
+.work-modal h4 { margin: 14px 0 6px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.work-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.work-actions a, .work-actions span { text-decoration: none; display: inline-flex; align-items: center; }
+.work-note { background: color-mix(in srgb, var(--warn) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; margin: 8px 0; }
+.work-checklist { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
+.work-checklist li { padding: 4px 0; }
+.work-checklist label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.work-msg { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 8px 0; background: var(--surface-2); }
+.work-msg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.work-msg textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 0.85rem; resize: vertical; }
+.work-output { display: flex; gap: 8px; }
+.work-output input { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; }
+.office-toast { z-index: 60; }
