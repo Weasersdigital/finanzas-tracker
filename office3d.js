@@ -3,7 +3,7 @@
 // procedurales (madera, moqueta, hormigón, mármol, asfalto), iluminación
 // física con tone mapping y reflejos de entorno, fachada de cristal, falsos
 // techos con luminarias, mobiliario detallado, calle con coches y árboles,
-// cielo con niebla y modo noche. Planta baja con recepción y cafetería, una
+// cielo con niebla y modo noche. Planta baja con recepción, una
 // planta por departamento (un despacho por persona), sala de reuniones en la
 // última planta y ascensor de cristal para moverse entre pisos.
 // Expone window.Office3D = { available, mount, unmount, sync, say, floorsList, focusFloor }.
@@ -444,17 +444,11 @@
       return r;
     };
 
-    const lobby = addFloor("lobby", "🏢 Recepción y cafetería", "#d97706");
-    lobby.tables = [{ x: B.w - 3.4, z: 0.6 }, { x: B.w - 6.8, z: 0.6 }];
-    lobby.tables.forEach(t => {
-      for (let i = 0; i < 4; i++) {
-        const a = i * Math.PI / 2 + Math.PI / 4;
-        const x = t.x + Math.cos(a) * 1.0, z = t.z + Math.sin(a) * 1.0;
-        lobby.spots.push({ x, z, face: Math.atan2(t.x - x, t.z - z) });
-      }
-    });
-    lobby.spots.push({ x: B.w - 4.2, z: B.backZ + 1.5, face: Math.PI });
-    lobby.spots.push({ x: B.w - 5.4, z: B.backZ + 1.5, face: Math.PI });
+    const lobby = addFloor("lobby", "🏢 Recepción", "#64748b");
+    lobby.spots = [
+      { x: SHAFT_W + 2.4, z: B.frontZ - 1.1, face: Math.PI }, { x: SHAFT_W + 3.6, z: B.frontZ - 1.1, face: Math.PI },
+      { x: SHAFT_W + 5.4, z: B.frontZ - 2.4, face: 0 }, { x: SHAFT_W + 6.6, z: B.frontZ - 2.4, face: 0 },
+    ];
 
     data.departments.forEach(d => {
       const members = data.people.filter(p => p.deptId === d.id);
@@ -651,18 +645,11 @@
         box(0.9, 0.04, 0.6, M.glass, SHAFT_W + 4.5, y0 + 0.42, B.frontZ - 1.8); box(0.8, 0.02, 0.5, M.darkMetal, SHAFT_W + 4.5, y0 + 0.4, B.frontZ - 1.8);
         [[-0.4, 0.25], [0.4, 0.25], [-0.4, -0.25], [0.4, -0.25]].forEach(([lx, lz]) => cyl(0.02, 0.02, 0.4, M.chrome, SHAFT_W + 4.5 + lx, y0 + 0.2, B.frontZ - 1.8 + lz));
         plant(SHAFT_W + 1.0, y0, B.frontZ - 1.0, null, true); plant(SHAFT_W + 7.4, y0, B.backZ + 0.8, null, true);
-        // Cafetería: barra, máquina de café, vitrina, nevera y taburetes
-        box(3.4, 0.98, 0.75, M.darkWood, B.w - 4.8, y0 + 0.49, B.backZ + 0.75);
-        box(3.5, 0.05, 0.85, M.marble, B.w - 4.8, y0 + 1.01, B.backZ + 0.75);
-        box(0.55, 0.5, 0.45, M.chrome, B.w - 5.9, y0 + 1.28, B.backZ + 0.75); box(0.5, 0.1, 0.4, M.plastic, B.w - 5.9, y0 + 1.58, B.backZ + 0.75);
-        box(0.9, 0.42, 0.5, M.glass, B.w - 4.6, y0 + 1.25, B.backZ + 0.75); box(0.86, 0.02, 0.46, M.metal, B.w - 4.6, y0 + 1.05, B.backZ + 0.75);
-        for (let i = 0; i < 4; i++) sph(0.07, cmat(i % 2 ? 0xd97706 : 0xf5deb3, 0.8), B.w - 4.95 + i * 0.22, y0 + 1.14, B.backZ + 0.72, null, 8);
-        box(0.85, 1.9, 0.72, M.metal, B.w - 1.3, y0 + 0.95, B.backZ + 0.75); box(0.02, 1.2, 0.03, M.darkMetal, B.w - 0.86, y0 + 1.0, B.backZ + 1.12);
-        [B.w - 6.2, B.w - 5.3, B.w - 4.4, B.w - 3.5].forEach(sx => { cyl(0.18, 0.18, 0.06, M.leather, sx, y0 + 0.72, B.backZ + 1.65, null, 20); cyl(0.025, 0.025, 0.7, M.chrome, sx, y0 + 0.35, B.backZ + 1.65); cyl(0.17, 0.17, 0.02, M.darkMetal, sx, y0 + 0.01, B.backZ + 1.65); });
-        for (let i = 0; i < 3; i++) { cyl(0.012, 0.012, 1.0, M.darkMetal, B.w - 5.8 + i * 1.0, y0 + FLOOR_H - SLAB - 0.5, B.backZ + 0.75); cyl(0.16, 0.08, 0.2, M.darkMetal, B.w - 5.8 + i * 1.0, y0 + FLOOR_H - SLAB - 1.05, B.backZ + 0.75); }
-        r.tables.forEach(t => cafeTable(t, y0));
-        const caf = textSprite("☕ Cafetería", { size: 24, h: 0.34, bg: "rgba(217,119,6,0.95)", color: "#fff" });
-        caf.position.set(B.w - 4.8, y0 + 2.2, B.backZ + 0.75); statics.add(caf);
+        // Zona derecha del vestíbulo: plantas grandes, expositor y mesa auxiliar
+        plant(B.w - 1.0, y0, B.backZ + 0.9, null, true); plant(B.w - 1.0, y0, B.frontZ - 1.0, null, true);
+        box(1.6, 1.9, 0.3, M.darkWood, B.w - 3.5, y0 + 0.95, B.backZ + 0.3);
+        for (let i = 0; i < 4; i++) box(1.4, 0.03, 0.26, M.metal, B.w - 3.5, y0 + 0.4 + i * 0.42, B.backZ + 0.3);
+        cafeTable({ x: B.w - 4.2, z: 0.9 }, y0);
         // Entrada: puertas de cristal con marco y marquesina
         box(0.14, 2.6, 0.14, M.darkMetal, B.w / 2 - 1.3, y0 + 1.3, B.frontZ); box(0.14, 2.6, 0.14, M.darkMetal, B.w / 2 + 1.3, y0 + 1.3, B.frontZ);
         box(2.74, 0.14, 0.14, M.darkMetal, B.w / 2, y0 + 2.6, B.frontZ);
@@ -835,7 +822,6 @@
     let dest;
     if (ch.status === "working") dest = deskDest(ch);
     else if (ch.status === "meeting") dest = takeSlot("meeting", ch);
-    else if (ch.status === "break") dest = takeSlot("lobby", ch);
     else dest = { roomId: "exit", x: B.w / 2 + rnd(-1, 1), z: B.exitZ, face: 0, leave: true };
     go(ch, dest);
   }
@@ -925,9 +911,6 @@
         ch.visit = { phase: "going" };
         go(ch, { roomId: c.roomId, x: c.x, z: c.visitZ, face: 0 });
       }
-    } else if (ch.status === "break") {
-      releaseSlot(ch);
-      go(ch, takeSlot("lobby", ch));
     }
   }
 
@@ -975,7 +958,7 @@
         if (!riding) ch.targetRot = Math.atan2(dx, dz);
       }
       ch.seated = false;
-      P.cup.visible = ch.status === "break";
+      P.cup.visible = false;
       if (riding) {
         ch.riding = true;
         ch.targetRot = 0;
@@ -995,7 +978,7 @@
       const it = ch.idleT;
       const talking = now < ch.talkUntil;
       P.legL.rotation.x = P.legR.rotation.x = ch.seated ? -Math.PI / 2 : 0;
-      P.cup.visible = ch.status === "break";
+      P.cup.visible = false;
       if (ch.seated && ch.status === "working") {
         P.armL.rotation.x = -1.15 + Math.sin(it * 14) * 0.08;
         P.armR.rotation.x = -1.15 + Math.cos(it * 13) * 0.08;
@@ -1005,12 +988,6 @@
         P.armL.rotation.x = -0.9; P.armR.rotation.x = -0.9 + (talking ? Math.sin(it * 6) * 0.35 : 0);
         P.head.rotation.y = Math.sin(it * 1.3) * 0.25;
         P.head.rotation.x = talking ? Math.sin(it * 9) * 0.05 : 0;
-      } else if (ch.status === "break") {
-        const sip = (Math.sin(it * 1.2) + 1) / 2;
-        P.armR.rotation.x = -1.3 - sip * 0.9;
-        P.armL.rotation.x = Math.sin(it * 0.9) * 0.1;
-        P.head.rotation.y = Math.sin(it * 0.6) * 0.3;
-        P.head.rotation.x = -sip * 0.15;
       } else {
         P.armL.rotation.x = Math.sin(it * 1.1) * 0.1;
         P.armR.rotation.x = talking ? -0.6 + Math.sin(it * 5) * 0.35 : Math.cos(it * 1.3) * 0.1;

@@ -436,6 +436,68 @@
   </div>
 </div>
 
+<!-- Cerebro de un trabajador -->
+<div id="brainOverlay" class="modal-overlay">
+  <div class="modal brain-modal">
+    <div class="brain-head">
+      <h3 id="brainTitle"></h3>
+      <button type="button" class="icon-btn" id="brainCloseBtn" title="Cerrar">✕</button>
+    </div>
+
+    <div class="brain-grid">
+      <div class="brain-col">
+        <h4>🧠 Conocimientos</h4>
+        <div id="brainSkills" class="skills-line"></div>
+        <h4>📋 Tareas</h4>
+        <ul id="brainTasks" class="task-list"></ul>
+        <div class="brain-export">
+          <button type="button" class="primary-btn" id="brainCopyBtn">📋 Copiar prompt del agente</button>
+          <button type="button" class="secondary-btn" id="brainSkillBtn">⬇️ Descargar SKILL.md</button>
+          <button type="button" class="link-btn" id="brainEditBtn">✏️ Editar ficha</button>
+        </div>
+      </div>
+
+      <div class="brain-col">
+        <h4>➕ Darle conocimiento</h4>
+        <div class="brain-tabs">
+          <form id="brainNoteForm" class="brain-add">
+            <input type="text" id="brainNoteTitle" placeholder="Título (ej. Cómo respondo a un lead)" maxlength="80">
+            <textarea id="brainNote" rows="4" placeholder="Escribe o pega aquí instrucciones, procesos, ejemplos, reglas…"></textarea>
+            <button type="submit" class="secondary-btn">📝 Guardar nota</button>
+          </form>
+
+          <div class="brain-add">
+            <div class="dictation-row">
+              <button type="button" class="secondary-btn" id="brainDictateBtn">🎙️ Dictar</button>
+              <input type="text" id="brainDictationTitle" placeholder="Título del dictado" maxlength="80">
+            </div>
+            <div id="brainTranscript" class="transcript" data-final=""></div>
+            <div class="dictation-row">
+              <button type="button" class="secondary-btn" id="brainSaveDictationBtn">💾 Guardar dictado</button>
+              <button type="button" class="link-btn" id="brainClearDictationBtn">Borrar</button>
+            </div>
+          </div>
+
+          <div class="brain-add brain-inline">
+            <label class="secondary-btn file-btn">📄 Subir archivos (.txt, .md, .json)
+              <input type="file" id="brainFile" accept=".txt,.md,.markdown,.json,.csv,text/plain" multiple style="display:none">
+            </label>
+          </div>
+
+          <form id="brainLinkForm" class="brain-add brain-inline">
+            <input type="text" id="brainLinkTitle" placeholder="Título" maxlength="60">
+            <input type="url" id="brainLink" placeholder="https://… (Drive, Notion, vídeo de referencia)">
+            <button type="submit" class="secondary-btn">🔗 Guardar enlace</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <h4>📚 Base de conocimiento <small class="hint" id="brainCount"></small></h4>
+    <div id="brainList" class="knowledge-list"></div>
+  </div>
+</div>
+
 <!-- Confirm Modal -->
 <div id="confirmModalOverlay" class="modal-overlay">
   <div class="modal">
